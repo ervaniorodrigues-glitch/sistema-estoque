@@ -1,0 +1,585 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro de Fornecedores{% endblock %}
+
+{% block content %}
+<div class="layout-with-list">
+    <!-- Listbox Lateral -->
+    <div class="sidebar-list">
+        <div class="list-header">
+            <input type="text" id="busca" class="list-search" placeholder="🔍 Busca Rápida...">
+        </div>
+        
+        <div class="list-filters">
+            <label style="margin-right: 10px;">
+                <input type="radio" name="filtro" value="ativos" checked onchange="carregarFornecedores()"> Ativos
+            </label>
+            <label style="margin-right: 10px;">
+                <input type="radio" name="filtro" value="inativos" onchange="carregarFornecedores()"> Inativos
+            </label>
+            <label style="margin-right: 10px;">
+                <input type="radio" name="filtro" value="todos" onchange="carregarFornecedores()"> Todos
+            </label>
+            <label>
+                <input type="radio" name="filtro" value="categoria" onchange="carregarFornecedores()"> Categoria
+            </label>
+        </div>
+        
+        <div class="list-content" id="listaFornecedores"></div>
+        
+        <div class="list-footer">
+            Total: <span id="totalFornecedores">0</span>
+        </div>
+    </div>
+    
+    <!-- Área do Formulário -->
+    <div class="form-area">
+        <div class="toolbar">
+            <button class="toolbar-btn" id="btnNovo" onclick="novoFornecedor()">
+                <i class="fas fa-file"></i> NOVO
+            </button>
+            <button class="toolbar-btn" id="btnLimpar" onclick="novoFornecedor()">
+                <i class="fas fa-broom"></i> Limpar
+            </button>
+            <button class="toolbar-btn" onclick="exportarExcel()" style="background-color: #27ae60;">
+                <i class="fas fa-file-excel"></i> Excel
+            </button>
+            <button class="toolbar-btn" onclick="abrirModalImportacao()" style="background-color: #3498db;">
+                <i class="fas fa-file-upload"></i> Importar
+            </button>
+            <button class="toolbar-btn btn-success" id="btnSalvar" onclick="salvarFornecedor()" style="display:none;">
+                <i class="fas fa-save"></i> Salvar
+            </button>
+            <button class="toolbar-btn btn-success" id="btnAlterar" onclick="salvarFornecedor()" style="display:none;">
+                <i class="fas fa-edit"></i> Alterar
+            </button>
+            <button class="toolbar-btn btn-danger" id="btnExcluir" onclick="excluirFornecedor()" style="display:none;">
+                <i class="fas fa-trash"></i> Excluir
+            </button>
+            <button class="toolbar-btn" id="btnInativar" onclick="inativarFornecedor()" style="display:none;">
+                <i class="fas fa-ban"></i> Inativar
+            </button>
+        </div>
+        
+        <form id="formFornecedor">
+            <input type="hidden" id="fornecedorCodigo">
+            
+            <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                    <label class="form-label">Nome / Razão Social *</label>
+                    <input type="text" class="form-control" id="nome" required style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group small">
+                    <label class="form-label">Código</label>
+                    <input type="text" class="form-control" id="codigo" readonly tabindex="-1" style="background-color: #ffe6e6;">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group medium">
+                    <label class="form-label">CNPJ</label>
+                    <input type="text" class="form-control" id="cnpj" maxlength="25" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Telefone</label>
+                    <input type="text" class="form-control" id="telefone" maxlength="14" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Celular</label>
+                    <input type="text" class="form-control" id="celular" maxlength="15" style="border: 2px solid #bdc3c7;">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group medium">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Categoria</label>
+                    <select class="form-control" id="categoria" style="border: 2px solid #bdc3c7;">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                    <label class="form-label">Endereço</label>
+                    <input type="text" class="form-control" id="endereco" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">CEP</label>
+                    <input type="text" class="form-control" id="cep" maxlength="9" onblur="buscarCEP()" style="border: 2px solid #bdc3c7;">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group medium">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" class="form-control" id="cidade" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group" style="width: 35px !important; max-width: 35px !important; min-width: 35px !important; flex: none !important;">
+                    <label class="form-label">UF</label>
+                    <input type="text" class="form-control" id="uf" maxlength="2" style="text-align: center; width: 35px !important; padding: 5px 2px; font-size: 12px; border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Contato</label>
+                    <input type="text" class="form-control" id="contato" style="border: 2px solid #bdc3c7;">
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let fornecedorSelecionado = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    carregarFornecedores();
+    carregarCategorias();
+    document.getElementById('busca').addEventListener('input', carregarFornecedores);
+    
+    // Formatação de CNPJ
+    document.getElementById('cnpj').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 14) {
+            value = value.replace(/(\d{2})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d)/, '$1/$2');
+            value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            e.target.value = value;
+        }
+    });
+    
+    // Formatação de Telefone (11) 2554-3990 - 14 dígitos
+    document.getElementById('telefone').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 10) {
+            value = value.replace(/(\d{2})(\d)/, '($1) $2');
+            value = value.replace(/(\d{4})(\d)/, '$1-$2');
+            e.target.value = value;
+        }
+    });
+    
+    // Formatação de Celular (11) 94576-0912 - 15 dígitos
+    document.getElementById('celular').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+            value = value.replace(/(\d{2})(\d)/, '($1) $2');
+            value = value.replace(/(\d{5})(\d)/, '$1-$2');
+            e.target.value = value;
+        }
+    });
+    
+    // Formatação de CEP
+    document.getElementById('cep').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 8) {
+            value = value.replace(/(\d{5})(\d)/, '$1-$2');
+            e.target.value = value;
+        }
+    });
+    
+    // Monitorar digitação para mostrar botão Salvar
+    document.getElementById('nome').addEventListener('input', controlarBotoes);
+});
+
+function carregarCategorias() {
+    fetch('/api/categorias')
+        .then(r => r.json())
+        .then(categorias => {
+            const select = document.getElementById('categoria');
+            select.innerHTML = '<option value="">Selecione...</option>';
+            categorias.forEach(c => {
+                select.innerHTML += `<option value="${c.nome}">${c.nome}</option>`;
+            });
+        });
+}
+
+function carregarFornecedores() {
+    const busca = document.getElementById('busca').value;
+    const filtro = document.querySelector('input[name="filtro"]:checked').value;
+    
+    let url = `/api/fornecedores?busca=${busca}&ativo=${filtro}`;
+    
+    // Se filtro for "categoria", buscar pela categoria
+    if (filtro === 'categoria') {
+        url = `/api/fornecedores?busca=${busca}&ativo=todos&filtro_categoria=true`;
+    }
+    
+    fetch(url)
+        .then(r => r.json())
+        .then(fornecedores => {
+            const lista = document.getElementById('listaFornecedores');
+            lista.innerHTML = fornecedores.map(f => `
+                <div class="list-item" onclick="selecionarFornecedor(${f.codigo})" id="item-${f.codigo}">
+                    <span class="status-badge ${f.ativo ? 'status-ativo' : 'status-inativo'}">
+                        ${f.ativo ? '✓' : '✗'}
+                    </span>
+                    ${f.nome}
+                </div>
+            `).join('');
+            
+            document.getElementById('totalFornecedores').textContent = fornecedores.length;
+        });
+}
+
+function selecionarFornecedor(codigo) {
+    document.querySelectorAll('.list-item').forEach(item => item.classList.remove('selected'));
+    document.getElementById(`item-${codigo}`).classList.add('selected');
+    
+    fetch(`/api/fornecedores?busca=&ativo=todos`)
+        .then(r => r.json())
+        .then(fornecedores => {
+            const f = fornecedores.find(forn => forn.codigo === codigo);
+            if (f) {
+                console.log('Fornecedor selecionado:', f);
+                console.log('Categoria:', f.categoria);
+                fornecedorSelecionado = codigo;
+                
+                document.getElementById('fornecedorCodigo').value = f.codigo || '';
+                document.getElementById('codigo').value = f.codigo || '';
+                document.getElementById('nome').value = f.nome || '';
+                document.getElementById('cnpj').value = f.cnpj || '';
+                document.getElementById('telefone').value = f.telefone || '';
+                document.getElementById('celular').value = f.celular || '';
+                document.getElementById('email').value = f.email || '';
+                document.getElementById('categoria').value = f.categoria || '';
+                console.log('Valor do select categoria:', document.getElementById('categoria').value);
+                document.getElementById('contato').value = f.contato || '';
+                document.getElementById('cep').value = f.cep || '';
+                document.getElementById('endereco').value = f.endereco || '';
+                document.getElementById('cidade').value = f.cidade || '';
+                document.getElementById('uf').value = f.uf || '';
+                
+                controlarBotoes();
+            }
+        });
+}
+
+function novoFornecedor() {
+    fornecedorSelecionado = null;
+    
+    // Limpar TODOS os campos manualmente
+    document.getElementById('fornecedorCodigo').value = '';
+    document.getElementById('codigo').value = '';
+    document.getElementById('nome').value = '';
+    document.getElementById('cnpj').value = '';
+    document.getElementById('telefone').value = '';
+    document.getElementById('celular').value = '';
+    document.getElementById('email').value = '';
+    document.getElementById('categoria').value = '';
+    document.getElementById('contato').value = '';
+    document.getElementById('cep').value = '';
+    document.getElementById('endereco').value = '';
+    document.getElementById('cidade').value = '';
+    document.getElementById('uf').value = '';
+    
+    // Limpar campo de busca
+    document.getElementById('busca').value = '';
+    
+    // Remover seleção da lista
+    document.querySelectorAll('.list-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    // Selecionar o filtro "Ativos"
+    document.querySelector('input[name="filtro"][value="ativos"]').checked = true;
+    
+    // Recarregar a lista com o filtro de ativos
+    carregarFornecedores();
+    
+    controlarBotoes();
+}
+
+function controlarBotoes() {
+    const temNome = document.getElementById('nome').value.trim() !== '';
+    const filtro = document.querySelector('input[name="filtro"]:checked').value;
+    
+    // Ocultar todos
+    document.getElementById('btnNovo').style.display = 'inline-flex';
+    document.getElementById('btnLimpar').style.display = 'inline-flex';
+    document.getElementById('btnSalvar').style.display = 'none';
+    document.getElementById('btnAlterar').style.display = 'none';
+    document.getElementById('btnExcluir').style.display = 'none';
+    document.getElementById('btnInativar').style.display = 'none';
+    
+    if (filtro === 'ativos' && fornecedorSelecionado) {
+        // Fornecedor ativo selecionado
+        document.getElementById('btnAlterar').style.display = 'inline-flex';
+        document.getElementById('btnExcluir').style.display = 'inline-flex';
+        document.getElementById('btnInativar').innerHTML = '<i class="fas fa-ban"></i> Inativar';
+        document.getElementById('btnInativar').style.display = 'inline-flex';
+    } else if (filtro === 'inativos' && fornecedorSelecionado) {
+        // Fornecedor inativo selecionado
+        document.getElementById('btnAlterar').style.display = 'inline-flex';
+        document.getElementById('btnExcluir').style.display = 'inline-flex';
+        document.getElementById('btnInativar').innerHTML = '<i class="fas fa-check"></i> Ativar';
+        document.getElementById('btnInativar').style.display = 'inline-flex';
+    } else if (temNome && !fornecedorSelecionado) {
+        // Novo fornecedor com dados digitados
+        document.getElementById('btnSalvar').style.display = 'inline-flex';
+    }
+}
+
+function inativarFornecedor() {
+    if (!fornecedorSelecionado) return;
+    
+    // Buscar o fornecedor atual para saber se está ativo ou inativo
+    fetch(`/api/fornecedores?busca=&ativo=todos`)
+        .then(r => r.json())
+        .then(fornecedores => {
+            const f = fornecedores.find(forn => forn.codigo === fornecedorSelecionado);
+            if (f) {
+                const novoStatus = !f.ativo;
+                const acao = novoStatus ? 'ativar' : 'inativar';
+                
+                if (confirm(`Deseja realmente ${acao} este fornecedor?`)) {
+                    const data = {
+                        nome: f.nome,
+                        cnpj: f.cnpj,
+                        telefone: f.telefone,
+                        celular: f.celular,
+                        email: f.email,
+                        categoria: f.categoria,
+                        contato: f.contato,
+                        endereco: f.endereco,
+                        cidade: f.cidade,
+                        uf: f.uf,
+                        cep: f.cep,
+                        ativo: novoStatus
+                    };
+                    
+                    fetch(`/api/fornecedores/${fornecedorSelecionado}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(data)
+                    })
+                    .then(r => r.json())
+                    .then(result => {
+                        if (result.success) {
+                            alert(`Fornecedor ${acao === 'ativar' ? 'ativado' : 'inativado'} com sucesso!`);
+                            carregarFornecedores();
+                            novoFornecedor();
+                        }
+                    });
+                }
+            }
+        });
+}
+
+function salvarFornecedor() {
+    const codigo = document.getElementById('fornecedorCodigo').value;
+    
+    const data = {
+        nome: document.getElementById('nome').value,
+        cnpj: document.getElementById('cnpj').value,
+        telefone: document.getElementById('telefone').value,
+        celular: document.getElementById('celular').value,
+        email: document.getElementById('email').value,
+        categoria: document.getElementById('categoria').value,
+        contato: document.getElementById('contato').value,
+        endereco: document.getElementById('endereco').value,
+        cidade: document.getElementById('cidade').value,
+        uf: document.getElementById('uf').value,
+        cep: document.getElementById('cep').value,
+        ativo: true
+    };
+    
+    const url = codigo ? `/api/fornecedores/${codigo}` : '/api/fornecedores';
+    const method = codigo ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('Fornecedor salvo com sucesso!');
+            carregarFornecedores();
+            novoFornecedor();
+        }
+    });
+}
+
+function buscarCEP() {
+    const cep = document.getElementById('cep').value.replace(/\D/g, '');
+    
+    if (cep.length === 8) {
+        fetch(`https://viacep.com.br/ws/${cep}/json/`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.erro) {
+                    document.getElementById('endereco').value = data.logradouro;
+                    document.getElementById('cidade').value = data.localidade;
+                    document.getElementById('uf').value = data.uf;
+                } else {
+                    alert('CEP não encontrado!');
+                }
+            })
+            .catch(() => {
+                alert('Erro ao buscar CEP!');
+            });
+    }
+}
+
+function excluirFornecedor() {
+    if (!fornecedorSelecionado) return;
+    
+    if (confirm('Deseja realmente excluir este fornecedor?')) {
+        fetch(`/api/fornecedores/${fornecedorSelecionado}`, {method: 'DELETE'})
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Fornecedor excluído!');
+                    carregarFornecedores();
+                    novoFornecedor();
+                }
+            });
+    }
+}
+
+// Listener global para fechar modais com ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modais = document.querySelectorAll('[id*="modal"]');
+        modais.forEach(modal => {
+            if (modal && modal.style.display !== 'none') {
+                modal.remove();
+            }
+        });
+    }
+});
+
+function exportarExcel() {
+    const busca = document.getElementById('busca').value;
+    const filtro = document.querySelector('input[name="filtro"]:checked').value;
+    
+    const params = new URLSearchParams();
+    params.append('busca', busca);
+    params.append('ativo', filtro);
+    
+    window.location.href = '/api/exportar-fornecedores-excel?' + params.toString();
+}
+
+function abrirModalImportacao() {
+    const modal = document.createElement('div');
+    modal.id = 'modalImportacao';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; max-width: 600px; width: 90%;">
+            <h2 style="margin-top: 0; color: #2c3e50;">
+                <i class="fas fa-file-upload"></i> Importar Fornecedores do Excel
+            </h2>
+            
+            <p style="color: #7f8c8d; margin: 15px 0;">
+                Selecione um arquivo Excel com os fornecedores a importar.
+            </p>
+            
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 10px; font-weight: bold; color: #2c3e50;">
+                    Arquivo Excel:
+                </label>
+                <input type="file" id="arquivoExcel" accept=".xlsx,.xls" 
+                       style="width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 5px;">
+            </div>
+            
+            <div id="progressoImportacao" style="display: none; margin: 20px 0;">
+                <div style="background: #ecf0f1; border-radius: 10px; height: 30px; overflow: hidden;">
+                    <div id="barraProgresso" style="background: #3498db; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                </div>
+                <p id="textoProgresso" style="text-align: center; margin-top: 10px; color: #2c3e50;"></p>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button onclick="fecharModalImportacao()" 
+                        style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Cancelar
+                </button>
+                <button onclick="importarFornecedores()" 
+                        style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <i class="fas fa-upload"></i> Importar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function fecharModalImportacao() {
+    const modal = document.getElementById('modalImportacao');
+    
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function importarFornecedores() {
+    const arquivo = document.getElementById('arquivoExcel').files[0];
+    
+    if (!arquivo) {
+        alert('Selecione um arquivo Excel!');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('arquivo', arquivo);
+    
+    // Mostrar progresso
+    document.getElementById('progressoImportacao').style.display = 'block';
+    document.getElementById('barraProgresso').style.width = '30%';
+    document.getElementById('textoProgresso').textContent = 'Processando arquivo...';
+    
+    fetch('/api/importar-fornecedores-excel', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(result => {
+        document.getElementById('barraProgresso').style.width = '100%';
+        
+        if (result.success) {
+            document.getElementById('textoProgresso').textContent = 
+                `✓ Importação concluída! ${result.importados} fornecedores importados.`;
+            document.getElementById('barraProgresso').style.background = '#27ae60';
+            
+            setTimeout(() => {
+                fecharModalImportacao();
+                carregarFornecedores();
+                alert(`Importação concluída com sucesso!\n\n` +
+                      `Fornecedores importados: ${result.importados}\n` +
+                      (result.erros && result.erros.length > 0 ? 
+                       `\nAvisos:\n${result.erros.join('\n')}` : ''));
+            }, 1500);
+        } else {
+            document.getElementById('textoProgresso').textContent = '✗ Erro na importação';
+            document.getElementById('barraProgresso').style.background = '#e74c3c';
+            alert('Erro ao importar fornecedores:\n' + result.message);
+        }
+    })
+    .catch(error => {
+        document.getElementById('barraProgresso').style.width = '100%';
+        document.getElementById('barraProgresso').style.background = '#e74c3c';
+        document.getElementById('textoProgresso').textContent = '✗ Erro na importação';
+        alert('Erro ao importar fornecedores: ' + error);
+    });
+}
+</script>
+{% endblock %}
+

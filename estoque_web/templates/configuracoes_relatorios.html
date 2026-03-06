@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Configurações de Relatórios{% endblock %}
+
+{% block content %}
+<style>
+    .config-container {
+        max-width: 650px;
+        margin: 15px auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .config-header {
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .config-header h2 {
+        color: #2d3748;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin: 0;
+    }
+    
+    .config-header i {
+        color: #3182ce;
+    }
+    
+    .config-buttons-top {
+        margin-bottom: 20px;
+    }
+    
+    .btn-salvar {
+        background-color: #38a169;
+        color: white;
+        border: none;
+        padding: 6px 15px;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .btn-salvar:hover {
+        background-color: #2f855a;
+    }
+    
+    .btn-fechar {
+        display: none;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 5px;
+        font-size: 13px;
+    }
+    
+    .form-group input[type="text"] {
+        width: 50%;
+        padding: 6px 10px;
+        border: 1px solid #cbd5e0;
+        border-radius: 4px;
+        font-size: 13px;
+    }
+    
+    .form-group input[type="text"]:focus {
+        outline: none;
+        border-color: #3182ce;
+        box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.1);
+    }
+    
+    .logo-section {
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+    }
+    
+    .logo-input {
+        flex: 0 0 50%;
+    }
+    
+    .logo-input input {
+        width: 100%;
+    }
+    
+    .btn-selecionar {
+        background-color: #38a169;
+        color: white;
+        border: none;
+        padding: 6px 15px;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+    }
+    
+    .btn-selecionar:hover {
+        background-color: #2f855a;
+    }
+    
+    .logo-preview {
+        margin-top: 10px;
+        padding: 15px;
+        background-color: #f7fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 4px;
+        text-align: center;
+        min-height: 120px;
+        max-height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .logo-preview img {
+        max-width: 100%;
+        max-height: 100px;
+        object-fit: contain;
+    }
+    
+    .logo-preview-empty {
+        color: #a0aec0;
+        font-style: italic;
+        font-size: 13px;
+    }
+</style>
+
+<div class="config-container">
+    <div class="config-buttons-top">
+        <button class="btn-salvar" onclick="salvarConfiguracoes()">
+            <i class="fas fa-save"></i> Salvar (Ctrl+S)
+        </button>
+        <button class="btn-fechar" onclick="fecharConfiguracoes()">
+            <i class="fas fa-times"></i> Fechar (Esc)
+        </button>
+    </div>
+    
+    <div class="config-header">
+        <h2>
+            <i class="fas fa-cog"></i>
+            Configurações de Relatórios e Impressão
+        </h2>
+    </div>
+    
+    <form id="formConfig">
+        <div class="form-group">
+            <label for="nomeEmpresa">Nome da Empresa:</label>
+            <input type="text" id="nomeEmpresa" name="nomeEmpresa" placeholder="Digite o nome da empresa">
+        </div>
+        
+        <div class="form-group">
+            <label>Logo da Empresa:</label>
+            <div class="logo-section">
+                <div class="logo-input">
+                    <input type="text" id="logoPath" name="logoPath" readonly placeholder="Nenhum arquivo selecionado">
+                </div>
+                <button type="button" class="btn-selecionar" onclick="selecionarLogo()">
+                    <i class="fas fa-folder-open"></i> Selecionar
+                </button>
+            </div>
+            <input type="file" id="logoFile" accept="image/*" style="display: none;" onchange="previewLogo(event)">
+            
+            <div class="logo-preview" id="logoPreview">
+                <span class="logo-preview-empty">Nenhuma imagem selecionada</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="rodape">Frase do Rodapé:</label>
+            <input type="text" id="rodape" name="rodape" placeholder="Digite a frase que aparecerá no rodapé dos relatórios">
+        </div>
+    </form>
+</div>
+
+<script>
+let logoFileData = null;
+
+// Carregar configurações ao abrir a página
+window.addEventListener('DOMContentLoaded', function() {
+    carregarConfiguracoes();
+});
+
+function carregarConfiguracoes() {
+    fetch('/api/configuracoes/relatorios')
+    .then(r => r.json())
+    .then(config => {
+        if (config.success) {
+            document.getElementById('nomeEmpresa').value = config.nome_empresa || '';
+            document.getElementById('rodape').value = config.rodape || '';
+            
+            if (config.logo_path) {
+                document.getElementById('logoPath').value = config.logo_path;
+                mostrarPreviewLogo(config.logo_url);
+            }
+        }
+    })
+    .catch(err => {
+        console.error('Erro ao carregar configurações:', err);
+    });
+}
+
+function selecionarLogo() {
+    document.getElementById('logoFile').click();
+}
+
+function previewLogo(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+        alert('❌ Por favor, selecione um arquivo de imagem válido.');
+        return;
+    }
+    
+    document.getElementById('logoPath').value = file.name;
+    logoFileData = file;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        mostrarPreviewLogo(e.target.result);
+    };
+    reader.readAsDataURL(file);
+}
+
+function mostrarPreviewLogo(url) {
+    const preview = document.getElementById('logoPreview');
+    preview.innerHTML = `<img src="${url}" alt="Logo da Empresa">`;
+}
+
+function salvarConfiguracoes() {
+    const nomeEmpresa = document.getElementById('nomeEmpresa').value.trim();
+    const rodape = document.getElementById('rodape').value.trim();
+    
+    if (!nomeEmpresa) {
+        alert('❌ Por favor, preencha o nome da empresa.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('nome_empresa', nomeEmpresa);
+    formData.append('rodape', rodape);
+    
+    if (logoFileData) {
+        formData.append('logo', logoFileData);
+    }
+    
+    fetch('/api/configuracoes/relatorios', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ Configurações salvas com sucesso!');
+        } else {
+            alert('❌ Erro ao salvar: ' + result.message);
+        }
+    })
+    .catch(err => {
+        alert('❌ Erro ao salvar configurações: ' + err.message);
+    });
+}
+
+function fecharConfiguracoes() {
+    window.history.back();
+}
+
+// Atalhos de teclado
+document.addEventListener('keydown', function(e) {
+    // Ctrl+S para salvar
+    if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        salvarConfiguracoes();
+        return;
+    }
+    
+    // ESC para fechar
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        window.history.back();
+    }
+}, { capture: true });
+</script>
+{% endblock %}

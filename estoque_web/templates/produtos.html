@@ -1,0 +1,720 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro de Produtos{% endblock %}
+
+{% block content %}
+<div class="layout-with-list">
+    <!-- Listbox Lateral -->
+    <div class="sidebar-list">
+        <div class="list-header">
+            <input type="text" id="busca" class="list-search" placeholder="🔍 Busca Rápida...">
+        </div>
+        
+        <div class="list-filters">
+            <label style="margin-right: 10px;">
+                <input type="radio" name="filtro" value="ativos" checked onchange="carregarProdutos()"> Ativos
+            </label>
+            <label style="margin-right: 10px;">
+                <input type="radio" name="filtro" value="inativos" onchange="carregarProdutos()"> Inativos
+            </label>
+            <label>
+                <input type="radio" name="filtro" value="todos" onchange="carregarProdutos()"> Todos
+            </label>
+        </div>
+        
+        <div class="list-content" id="listaProdutos">
+            <!-- Produtos serão carregados aqui -->
+        </div>
+        
+        <div class="list-footer">
+            Total: <span id="totalProdutos">0</span>
+        </div>
+    </div>
+    
+    <!-- Área do Formulário -->
+    <div class="form-area">
+        <div class="toolbar">
+            <button class="toolbar-btn" id="btnNovo" onclick="novoProduto()">
+                <i class="fas fa-file"></i> NOVO
+            </button>
+            <button class="toolbar-btn" id="btnLimpar" onclick="novoProduto()">
+                <i class="fas fa-broom"></i> Limpar
+            </button>
+            <button class="toolbar-btn" onclick="exportarExcel()" style="background-color: #27ae60;">
+                <i class="fas fa-file-excel"></i> Excel
+            </button>
+            <button class="toolbar-btn" onclick="abrirModalImportacao()" style="background-color: #3498db;">
+                <i class="fas fa-file-upload"></i> Importar
+            </button>
+            <button class="toolbar-btn btn-success" id="btnSalvar" onclick="salvarProduto()" style="display:none;">
+                <i class="fas fa-save"></i> Salvar
+            </button>
+            <button class="toolbar-btn btn-success" id="btnAlterar" onclick="salvarProduto()" style="display:none;">
+                <i class="fas fa-edit"></i> Alterar
+            </button>
+            <button class="toolbar-btn btn-danger" id="btnExcluir" onclick="excluirProduto()" style="display:none;">
+                <i class="fas fa-trash"></i> Excluir
+            </button>
+            <button class="toolbar-btn" id="btnInativar" onclick="inativarProduto()" style="display:none;">
+                <i class="fas fa-ban"></i> Inativar
+            </button>
+        </div>
+        
+        <form id="formProduto">
+            <input type="hidden" id="produtoCodigo">
+            
+            <div class="form-row">
+                <div class="form-group" style="flex: 3;">
+                    <label class="form-label">Descrição do Item *</label>
+                    <input type="text" class="form-control" id="descricao" required style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group small">
+                    <label class="form-label">ID</label>
+                    <input type="text" class="form-control" id="codigo" readonly tabindex="-1" style="background-color: #ffe6e6;">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group medium">
+                    <label class="form-label">Código de Barras</label>
+                    <input type="text" class="form-control" id="codigoBarras" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group small">
+                    <label class="form-label">Unidade</label>
+                    <select class="form-control" id="unidade" style="border: 2px solid #bdc3c7;">
+                        <option value=""></option>
+                    </select>
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Marca</label>
+                    <select class="form-control" id="marca" style="border: 2px solid #bdc3c7;">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Categoria</label>
+                    <select class="form-control" id="categoria" style="border: 2px solid #bdc3c7;">
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                    <label class="form-label">Fornecedor</label>
+                    <select class="form-control" id="fornecedor" style="border: 2px solid #bdc3c7;">
+                    </select>
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Foto (caminho)</label>
+                    <div class="photo-input">
+                        <input type="text" class="form-control" id="foto" placeholder="C:/Users/..." style="font-size: 11px; border: 2px solid #bdc3c7;">
+                        <button type="button" onclick="document.getElementById('fotoFile').click()">
+                            <i class="fas fa-folder-open"></i>
+                        </button>
+                    </div>
+                    <input type="file" id="fotoFile" accept="image/*" style="display: none;" onchange="setFotoPath(event)">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group medium">
+                    <label class="form-label">R$ Compra</label>
+                    <input type="text" class="form-control" id="precoCompra" value="R$ 0,00" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">R$ Venda</label>
+                    <input type="text" class="form-control" id="precoVenda" value="R$ 0,00" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Estoque Mínimo</label>
+                    <input type="number" class="form-control" id="estoqueMinimo" value="0" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Estoque Máximo</label>
+                    <input type="number" class="form-control" id="estoqueMaximo" value="0" style="border: 2px solid #bdc3c7;">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Observação</label>
+                    <textarea class="form-control" id="observacao" rows="3" style="border: 2px solid #bdc3c7;"></textarea>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let produtoSelecionado = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    carregarProdutos();
+    carregarCategorias();
+    carregarFornecedores();
+    carregarMarcas();
+    carregarUnidades();
+    
+    document.getElementById('busca').addEventListener('input', carregarProdutos);
+    document.getElementById('descricao').addEventListener('input', controlarBotoes);
+    
+    // Adicionar máscara de moeda nos campos de preço
+    document.getElementById('precoCompra').addEventListener('input', function(e) {
+        formatarMoeda(e.target);
+    });
+    document.getElementById('precoVenda').addEventListener('input', function(e) {
+        formatarMoeda(e.target);
+    });
+});
+
+function formatarMoeda(input) {
+    let valor = input.value;
+    
+    // Remove tudo que não é número
+    valor = valor.replace(/\D/g, '');
+    
+    // Converte para número e divide por 100 (centavos)
+    valor = (parseInt(valor) || 0) / 100;
+    
+    // Formata como moeda brasileira
+    input.value = valor.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    });
+}
+
+function moedaParaFloat(valorFormatado) {
+    // Remove R$, espaços e pontos de milhar, substitui vírgula por ponto
+    return parseFloat(
+        valorFormatado
+            .replace('R$', '')
+            .replace(/\s/g, '')
+            .replace(/\./g, '')
+            .replace(',', '.')
+    ) || 0;
+}
+
+function carregarUnidades() {
+    fetch('/api/unidades')
+        .then(r => r.json())
+        .then(unidades => {
+            const select = document.getElementById('unidade');
+            // Limpar e adicionar opção vazia
+            select.innerHTML = '<option value=""></option>';
+            // Adicionar unidades do banco
+            unidades.forEach(unidade => {
+                const option = document.createElement('option');
+                option.value = unidade.nome;
+                option.textContent = unidade.nome;
+                select.appendChild(option);
+            });
+        })
+        .catch(err => console.error('Erro ao carregar unidades:', err));
+}
+
+function carregarMarcas() {
+    fetch('/api/marcas')
+        .then(r => r.json())
+        .then(marcas => {
+            const select = document.getElementById('marca');
+            // Limpar e adicionar opção vazia
+            select.innerHTML = '<option value="">Selecione...</option>';
+            // Adicionar marcas do banco
+            marcas.forEach(marca => {
+                const option = document.createElement('option');
+                option.value = marca.nome;
+                option.textContent = marca.nome;
+                select.appendChild(option);
+            });
+        })
+        .catch(err => console.error('Erro ao carregar marcas:', err));
+}
+
+function carregarCategorias() {
+    fetch('/api/categorias')
+        .then(r => r.json())
+        .then(categorias => {
+            const select = document.getElementById('categoria');
+            // Limpar e adicionar opção vazia
+            select.innerHTML = '<option value="">Selecione...</option>';
+            // Adicionar categorias do banco
+            categorias.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.nome;
+                option.textContent = cat.nome;
+                select.appendChild(option);
+            });
+        })
+        .catch(err => console.error('Erro ao carregar categorias:', err));
+}
+
+function carregarFornecedores() {
+    fetch('/api/fornecedores?ativo=ativos')
+        .then(r => r.json())
+        .then(fornecedores => {
+            const select = document.getElementById('fornecedor');
+            // Limpar e adicionar opção vazia
+            select.innerHTML = '<option value="">Selecione...</option>';
+            // Adicionar fornecedores do banco
+            fornecedores.forEach(forn => {
+                const option = document.createElement('option');
+                option.value = forn.nome;
+                option.textContent = forn.nome;
+                select.appendChild(option);
+            });
+        })
+        .catch(err => console.error('Erro ao carregar fornecedores:', err));
+}
+
+function carregarProdutos() {
+    const busca = document.getElementById('busca').value;
+    const filtro = document.querySelector('input[name="filtro"]:checked').value;
+    
+    fetch(`/api/produtos?busca=${busca}&ativo=${filtro}`)
+        .then(r => r.json())
+        .then(produtos => {
+            const lista = document.getElementById('listaProdutos');
+            lista.innerHTML = produtos.map(p => `
+                <div class="list-item" onclick="selecionarProduto(${p.codigo})" id="item-${p.codigo}">
+                    <span class="status-badge ${p.ativo ? 'status-ativo' : 'status-inativo'}">
+                        ${p.ativo ? '✓' : '✗'}
+                    </span>
+                    ${p.descricao}
+                </div>
+            `).join('');
+            
+            document.getElementById('totalProdutos').textContent = produtos.length;
+        });
+}
+
+function selecionarProduto(codigo) {
+    // Remover seleção anterior
+    document.querySelectorAll('.list-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    // Selecionar novo item
+    const itemElement = document.getElementById(`item-${codigo}`);
+    if (itemElement) {
+        itemElement.classList.add('selected');
+    }
+    
+    // Carregar dados do produto específico
+    fetch(`/api/produtos/${codigo}`)
+        .then(r => {
+            if (!r.ok) throw new Error('Produto não encontrado');
+            return r.json();
+        })
+        .then(p => {
+            produtoSelecionado = codigo;
+            document.getElementById('produtoCodigo').value = p.codigo || '';
+            document.getElementById('codigo').value = p.codigo || '';
+            document.getElementById('descricao').value = p.descricao || '';
+            document.getElementById('codigoBarras').value = p.codigo_barras || '';
+            
+            // Preencher os selects - se o valor não existir nas opções, adicionar
+            preencherSelect('unidade', p.unidade);
+            preencherSelect('marca', p.marca);
+            preencherSelect('categoria', p.categoria);
+            preencherSelect('fornecedor', p.fornecedor);
+            
+            // Formatar valores em Real
+            const precoCompra = (p.preco_compra || 0);
+            const precoVenda = (p.preco_venda || 0);
+            document.getElementById('precoCompra').value = precoCompra.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+            document.getElementById('precoVenda').value = precoVenda.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+            
+            document.getElementById('estoqueMinimo').value = p.estoque_minimo || 0;
+            document.getElementById('estoqueMaximo').value = p.estoque_maximo || 0;
+            document.getElementById('observacao').value = p.observacao || '';
+            
+            // Extrair apenas o nome do arquivo se for um caminho completo
+            let nomeArquivo = p.foto || '';
+            if (nomeArquivo && nomeArquivo.includes('\\')) {
+                nomeArquivo = nomeArquivo.split('\\').pop();
+            } else if (nomeArquivo && nomeArquivo.includes('/')) {
+                nomeArquivo = nomeArquivo.split('/').pop();
+            }
+            
+            document.getElementById('foto').value = nomeArquivo;
+            
+            controlarBotoes();
+        })
+        .catch(error => {
+            console.error('Erro ao carregar produto:', error);
+            alert('Erro ao carregar dados do produto');
+        });
+}
+
+function preencherSelect(selectId, valor) {
+    const select = document.getElementById(selectId);
+    if (!valor) return;
+    
+    // Tentar preencher com valor existente
+    select.value = valor;
+    
+    // Se não encontrou, adicionar como nova opção
+    if (select.value !== valor) {
+        const option = document.createElement('option');
+        option.value = valor;
+        option.textContent = valor;
+        select.appendChild(option);
+        select.value = valor;
+    }
+}
+
+function novoProduto() {
+    produtoSelecionado = null;
+    
+    // Limpar TODOS os campos manualmente
+    document.getElementById('produtoCodigo').value = '';
+    document.getElementById('codigo').value = '';
+    document.getElementById('descricao').value = '';
+    document.getElementById('codigoBarras').value = '';
+    document.getElementById('unidade').value = '';
+    document.getElementById('marca').value = '';
+    document.getElementById('categoria').value = '';
+    document.getElementById('fornecedor').value = '';
+    document.getElementById('precoCompra').value = 'R$ 0,00';
+    document.getElementById('precoVenda').value = 'R$ 0,00';
+    document.getElementById('estoqueMinimo').value = '0';
+    document.getElementById('estoqueMaximo').value = '0';
+    document.getElementById('observacao').value = '';
+    document.getElementById('foto').value = '';
+    
+    // Remover seleção da lista
+    document.querySelectorAll('.list-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    controlarBotoes();
+}
+
+function setFotoPath(event) {
+    const file = event.target.files[0];
+    if (file) {
+        // Fazer upload da foto
+        const formData = new FormData();
+        formData.append('foto', file);
+        
+        fetch('/api/upload-foto', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(result => {
+            if (result.success) {
+                // Colocar o nome do arquivo no campo
+                document.getElementById('foto').value = result.filename;
+                alert('Foto enviada com sucesso!');
+            } else {
+                alert('Erro ao enviar foto: ' + result.message);
+            }
+        })
+        .catch(error => {
+            alert('Erro ao enviar foto: ' + error);
+        });
+    }
+}
+
+function controlarBotoes() {
+    const temDescricao = document.getElementById('descricao').value.trim() !== '';
+    const filtro = document.querySelector('input[name="filtro"]:checked').value;
+    
+    // Ocultar todos
+    document.getElementById('btnNovo').style.display = 'inline-flex';
+    document.getElementById('btnLimpar').style.display = 'inline-flex';
+    document.getElementById('btnSalvar').style.display = 'none';
+    document.getElementById('btnAlterar').style.display = 'none';
+    document.getElementById('btnExcluir').style.display = 'none';
+    document.getElementById('btnInativar').style.display = 'none';
+    
+    if (filtro === 'ativos' && produtoSelecionado) {
+        // Produto ativo selecionado - mostrar Alterar, Excluir e Inativar
+        document.getElementById('btnAlterar').style.display = 'inline-flex';
+        document.getElementById('btnExcluir').style.display = 'inline-flex';
+        document.getElementById('btnInativar').innerHTML = '<i class="fas fa-ban"></i> Inativar';
+        document.getElementById('btnInativar').style.display = 'inline-flex';
+    } else if (filtro === 'inativos' && produtoSelecionado) {
+        // Produto inativo selecionado - mostrar Alterar, Excluir e Ativar
+        document.getElementById('btnAlterar').style.display = 'inline-flex';
+        document.getElementById('btnExcluir').style.display = 'inline-flex';
+        document.getElementById('btnInativar').innerHTML = '<i class="fas fa-check"></i> Ativar';
+        document.getElementById('btnInativar').style.display = 'inline-flex';
+    } else if (temDescricao && !produtoSelecionado) {
+        // Novo produto com dados digitados - mostrar Salvar
+        document.getElementById('btnSalvar').style.display = 'inline-flex';
+    }
+}
+
+function salvarProduto() {
+    const codigo = document.getElementById('produtoCodigo').value;
+    const data = {
+        descricao: document.getElementById('descricao').value,
+        codigo_barras: document.getElementById('codigoBarras').value,
+        unidade: document.getElementById('unidade').value,
+        marca: document.getElementById('marca').value,
+        categoria: document.getElementById('categoria').value,
+        fornecedor: document.getElementById('fornecedor').value,
+        preco_compra: moedaParaFloat(document.getElementById('precoCompra').value),
+        preco_venda: moedaParaFloat(document.getElementById('precoVenda').value),
+        estoque_minimo: parseInt(document.getElementById('estoqueMinimo').value) || 0,
+        estoque_maximo: parseInt(document.getElementById('estoqueMaximo').value) || 0,
+        observacao: document.getElementById('observacao').value,
+        foto: document.getElementById('foto').value,
+        ativo: true
+    };
+    
+    // Se tem código, é alteração
+    if (codigo) {
+        data.codigo = parseInt(codigo);
+    }
+    
+    // Sempre usa POST - o backend decide se cria ou atualiza
+    fetch('/api/produtos', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert(codigo ? 'Produto alterado com sucesso!' : 'Produto cadastrado com sucesso!');
+            carregarProdutos();
+            novoProduto();
+        }
+    })
+    .catch(error => {
+        alert('Erro ao salvar produto: ' + error);
+    });
+}
+
+function excluirProduto() {
+    if (!produtoSelecionado) return;
+    
+    if (confirm('Deseja realmente excluir este produto?')) {
+        fetch(`/api/produtos/${produtoSelecionado}`, {method: 'DELETE'})
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Produto excluído!');
+                    carregarProdutos();
+                    novoProduto();
+                }
+            });
+    }
+}
+
+function inativarProduto() {
+    if (!produtoSelecionado) return;
+    
+    // Buscar o produto atual para saber se está ativo ou inativo
+    fetch(`/api/produtos?busca=&ativo=todos`)
+        .then(r => r.json())
+        .then(produtos => {
+            const p = produtos.find(prod => prod.codigo === produtoSelecionado);
+            if (p) {
+                const novoStatus = !p.ativo;
+                const acao = novoStatus ? 'ativar' : 'inativar';
+                
+                if (confirm(`Deseja realmente ${acao} este produto?`)) {
+                    // Atualizar apenas o status
+                    const data = {
+                        codigo: p.codigo,
+                        descricao: p.descricao,
+                        codigo_barras: p.codigo_barras,
+                        unidade: p.unidade,
+                        marca: p.marca,
+                        categoria: p.categoria,
+                        fornecedor: p.fornecedor,
+                        preco_compra: p.preco_compra,
+                        preco_venda: p.preco_venda,
+                        estoque_minimo: p.estoque_minimo,
+                        estoque_maximo: p.estoque_maximo,
+                        observacao: p.observacao,
+                        foto: p.foto,
+                        ativo: novoStatus
+                    };
+                    
+                    fetch('/api/produtos', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(data)
+                    })
+                    .then(r => r.json())
+                    .then(result => {
+                        if (result.success) {
+                            alert(`Produto ${acao === 'ativar' ? 'ativado' : 'inativado'} com sucesso!`);
+                            carregarProdutos();
+                            novoProduto();
+                        }
+                    });
+                }
+            }
+        });
+}
+
+// Listener global para fechar modais com ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modais = document.querySelectorAll('[id*="modal"]');
+        modais.forEach(modal => {
+            if (modal && modal.style.display !== 'none') {
+                modal.remove();
+            }
+        });
+    }
+});
+
+function exportarExcel() {
+    const busca = document.getElementById('busca').value;
+    const filtro = document.querySelector('input[name="filtro"]:checked').value;
+    
+    const params = new URLSearchParams();
+    if (busca) params.append('busca', busca);
+    params.append('ativo', filtro);
+    
+    window.location.href = '/api/exportar-produtos-excel?' + params.toString();
+}
+
+function abrirModalImportacao() {
+    const modal = document.createElement('div');
+    modal.id = 'modalImportacao';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; max-width: 600px; width: 90%;">
+            <h2 style="margin-top: 0; color: #2c3e50;">
+                <i class="fas fa-file-upload"></i> Importar Produtos do Excel
+            </h2>
+            
+            <div style="margin: 20px 0; padding: 15px; background: #e8f4f8; border-left: 4px solid #3498db; border-radius: 4px;">
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">📋 Formato da Planilha:</h4>
+                <p style="margin: 5px 0; font-size: 14px;">A planilha deve conter as seguintes colunas (nesta ordem):</p>
+                <ul style="margin: 10px 0; padding-left: 20px; font-size: 13px;">
+                    <li><strong>Descrição</strong> (obrigatório)</li>
+                    <li><strong>Código de Barras</strong></li>
+                    <li><strong>Unidade</strong></li>
+                    <li><strong>Marca</strong></li>
+                    <li><strong>Categoria</strong></li>
+                    <li><strong>Fornecedor</strong></li>
+                    <li><strong>R$ Compra</strong></li>
+                    <li><strong>R$ Venda</strong></li>
+                    <li><strong>Estoque Mínimo</strong></li>
+                    <li><strong>Estoque Máximo</strong></li>
+                    <li><strong>Observação</strong></li>
+                </ul>
+                <p style="margin: 10px 0 0 0; font-size: 12px; color: #7f8c8d;">
+                    <strong>Nota:</strong> A coluna ID será gerada automaticamente pelo sistema.
+                </p>
+            </div>
+            
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 10px; font-weight: bold; color: #2c3e50;">
+                    Selecione o arquivo Excel (.xlsx):
+                </label>
+                <input type="file" id="arquivoExcel" accept=".xlsx,.xls" 
+                       style="padding: 10px; border: 2px solid #bdc3c7; border-radius: 5px; width: 100%;">
+            </div>
+            
+            <div id="progressoImportacao" style="display: none; margin: 20px 0;">
+                <div style="background: #ecf0f1; border-radius: 10px; height: 30px; overflow: hidden;">
+                    <div id="barraProgresso" style="background: #3498db; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                </div>
+                <p id="textoProgresso" style="text-align: center; margin-top: 10px; color: #7f8c8d;"></p>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button onclick="fecharModalImportacao()" 
+                        style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Cancelar
+                </button>
+                <button onclick="importarProdutos()" 
+                        style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <i class="fas fa-upload"></i> Importar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function fecharModalImportacao() {
+    const modal = document.getElementById('modalImportacao');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function importarProdutos() {
+    const arquivo = document.getElementById('arquivoExcel').files[0];
+    
+    if (!arquivo) {
+        alert('Por favor, selecione um arquivo Excel.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('arquivo', arquivo);
+    
+    // Mostrar progresso
+    document.getElementById('progressoImportacao').style.display = 'block';
+    document.getElementById('barraProgresso').style.width = '30%';
+    document.getElementById('textoProgresso').textContent = 'Processando arquivo...';
+    
+    fetch('/api/importar-produtos-excel', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(result => {
+        document.getElementById('barraProgresso').style.width = '100%';
+        
+        if (result.success) {
+            document.getElementById('textoProgresso').textContent = 
+                `✓ Importação concluída! ${result.importados} produtos importados.`;
+            document.getElementById('barraProgresso').style.background = '#27ae60';
+            
+            setTimeout(() => {
+                fecharModalImportacao();
+                carregarProdutos();
+                alert(`Importação concluída com sucesso!\n\n` +
+                      `Produtos importados: ${result.importados}\n` +
+                      (result.erros && result.erros.length > 0 ? 
+                       `\nAvisos:\n${result.erros.join('\n')}` : ''));
+            }, 1500);
+        } else {
+            document.getElementById('textoProgresso').textContent = '✗ Erro na importação';
+            document.getElementById('barraProgresso').style.background = '#e74c3c';
+            alert('Erro ao importar produtos:\n' + result.message);
+        }
+    })
+    .catch(error => {
+        document.getElementById('barraProgresso').style.width = '100%';
+        document.getElementById('barraProgresso').style.background = '#e74c3c';
+        document.getElementById('textoProgresso').textContent = '✗ Erro na importação';
+        alert('Erro ao importar produtos: ' + error);
+    });
+}
+
+</script>
+{% endblock %}
+

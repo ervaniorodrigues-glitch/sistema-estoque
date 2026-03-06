@@ -1,0 +1,631 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro de Funcionários{% endblock %}
+
+{% block content %}
+<div class="layout-with-list">
+    <!-- Listbox Lateral -->
+    <div class="sidebar-list">
+        <div class="list-header">
+            <input type="text" id="busca" class="list-search" placeholder="🔍 Busca Rápida...">
+        </div>
+        
+        <div class="list-filters">
+            <label style="margin-right: 10px;">
+                <input type="radio" name="filtro" value="ativos" checked onchange="carregarFuncionarios()"> Ativos
+            </label>
+            <label style="margin-right: 10px;">
+                <input type="radio" name="filtro" value="inativos" onchange="carregarFuncionarios()"> Inativos
+            </label>
+            <label>
+                <input type="radio" name="filtro" value="todos" onchange="carregarFuncionarios()"> Todos
+            </label>
+        </div>
+        
+        <div class="list-content" id="listaFuncionarios"></div>
+        
+        <div class="list-footer">
+            Total: <span id="totalFuncionarios">0</span>
+        </div>
+    </div>
+    
+    <!-- Área do Formulário -->
+    <div class="form-area">
+        <div class="toolbar">
+            <button class="toolbar-btn" id="btnNovo" onclick="novoFuncionario()">
+                <i class="fas fa-file"></i> NOVO
+            </button>
+            <button class="toolbar-btn" id="btnLimpar" onclick="novoFuncionario()">
+                <i class="fas fa-broom"></i> Limpar
+            </button>
+            <button class="toolbar-btn" onclick="exportarExcel()" style="background-color: #27ae60;">
+                <i class="fas fa-file-excel"></i> Excel
+            </button>
+            <button class="toolbar-btn" onclick="abrirModalImportacao()" style="background-color: #3498db;">
+                <i class="fas fa-file-upload"></i> Importar
+            </button>
+            <button class="toolbar-btn btn-success" id="btnSalvar" onclick="salvarFuncionario()" style="display:none;">
+                <i class="fas fa-save"></i> Salvar
+            </button>
+            <button class="toolbar-btn btn-success" id="btnAlterar" onclick="salvarFuncionario()" style="display:none;">
+                <i class="fas fa-edit"></i> Alterar
+            </button>
+            <button class="toolbar-btn btn-danger" id="btnExcluir" onclick="excluirFuncionario()" style="display:none;">
+                <i class="fas fa-trash"></i> Excluir
+            </button>
+            <button class="toolbar-btn" id="btnInativar" onclick="inativarFuncionario()" style="display:none;">
+                <i class="fas fa-ban"></i> Inativar
+            </button>
+        </div>
+        
+        <form id="formFuncionario">
+            <input type="hidden" id="funcionarioId">
+            
+            <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                    <label class="form-label">Nome Completo *</label>
+                    <input type="text" class="form-control" id="nome" required style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group small">
+                    <label class="form-label">ID</label>
+                    <input type="text" class="form-control" id="codigo" readonly tabindex="-1" style="background-color: #ffe6e6;">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group medium">
+                    <label class="form-label">Cargo *</label>
+                    <input type="text" class="form-control" id="cargo" required style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">CPF</label>
+                    <input type="text" class="form-control" id="cpf" maxlength="14" style="border: 2px solid #bdc3c7;">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group medium">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Celular</label>
+                    <input type="text" class="form-control" id="celular" maxlength="16" style="border: 2px solid #bdc3c7;">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                    <label class="form-label">Endereço</label>
+                    <input type="text" class="form-control" id="endereco" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">CEP</label>
+                    <input type="text" class="form-control" id="cep" maxlength="9" onblur="buscarCEP()" style="border: 2px solid #bdc3c7;">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group medium">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" class="form-control" id="cidade" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group small">
+                    <label class="form-label">UF</label>
+                    <input type="text" class="form-control" id="uf" maxlength="2" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Data Admissão</label>
+                    <input type="date" class="form-control" id="dataAdmissao" onchange="calcularTempoEmpresa()" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group medium">
+                    <label class="form-label">Tempo de Empresa</label>
+                    <input type="text" class="form-control" id="tempoEmpresa" readonly tabindex="-1" style="background-color: #e9ecef;">
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let funcionarioSelecionado = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    carregarFuncionarios();
+    document.getElementById('busca').addEventListener('input', carregarFuncionarios);
+    
+    // Formatação de CPF
+    document.getElementById('cpf').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            e.target.value = value;
+        }
+    });
+    
+    // Formatação de Celular (11) 9-4576-0912
+    document.getElementById('celular').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+            value = value.replace(/(\d{2})(\d)/, '($1) $2');
+            value = value.replace(/(\d{5})(\d)/, '$1-$2');
+            e.target.value = value;
+        }
+    });
+    
+    // Formatação de CEP
+    document.getElementById('cep').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 8) {
+            value = value.replace(/(\d{5})(\d)/, '$1-$2');
+            e.target.value = value;
+        }
+    });
+    
+    // Monitorar digitação para mostrar botão Salvar
+    document.getElementById('nome').addEventListener('input', controlarBotoes);
+    document.getElementById('cargo').addEventListener('input', controlarBotoes);
+});
+
+function carregarFuncionarios() {
+    const busca = document.getElementById('busca').value;
+    const filtro = document.querySelector('input[name="filtro"]:checked').value;
+    
+    fetch(`/api/funcionarios?busca=${busca}&ativo=${filtro}`)
+        .then(r => r.json())
+        .then(funcionarios => {
+            const lista = document.getElementById('listaFuncionarios');
+            lista.innerHTML = funcionarios.map(f => `
+                <div class="list-item" onclick="selecionarFuncionario(${f.id})" id="item-${f.id}">
+                    <span class="status-badge ${f.ativo ? 'status-ativo' : 'status-inativo'}">
+                        ${f.ativo ? '✓' : '✗'}
+                    </span>
+                    ${f.nome}
+                </div>
+            `).join('');
+            
+            document.getElementById('totalFuncionarios').textContent = funcionarios.length;
+        });
+}
+
+function selecionarFuncionario(id) {
+    document.querySelectorAll('.list-item').forEach(item => item.classList.remove('selected'));
+    document.getElementById(`item-${id}`).classList.add('selected');
+    
+    fetch(`/api/funcionarios?busca=&ativo=todos`)
+        .then(r => r.json())
+        .then(funcionarios => {
+            const f = funcionarios.find(func => func.id === id);
+            if (f) {
+                funcionarioSelecionado = id;
+                document.getElementById('funcionarioId').value = f.id;
+                document.getElementById('codigo').value = f.id;
+                document.getElementById('nome').value = f.nome;
+                document.getElementById('cargo').value = f.cargo || '';
+                document.getElementById('cpf').value = f.cpf || '';
+                document.getElementById('email').value = f.email || '';
+                document.getElementById('celular').value = f.celular || '';
+                document.getElementById('endereco').value = f.endereco || '';
+                document.getElementById('cidade').value = f.cidade || '';
+                document.getElementById('uf').value = f.uf || '';
+                document.getElementById('cep').value = f.cep || '';
+                
+                // Carregar data de admissão e calcular tempo
+                if (f.data_admissao) {
+                    document.getElementById('dataAdmissao').value = f.data_admissao;
+                    calcularTempoEmpresa();
+                }
+                
+                controlarBotoes();
+            }
+        });
+}
+
+function novoFuncionario() {
+    funcionarioSelecionado = null;
+    document.getElementById('formFuncionario').reset();
+    document.getElementById('funcionarioId').value = '';
+    document.getElementById('codigo').value = '';
+    
+    // Remover seleção da lista
+    document.querySelectorAll('.list-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    controlarBotoes();
+}
+
+function controlarBotoes() {
+    const temNome = document.getElementById('nome').value.trim() !== '';
+    const temCargo = document.getElementById('cargo').value.trim() !== '';
+    const filtro = document.querySelector('input[name="filtro"]:checked').value;
+    
+    // Ocultar todos
+    document.getElementById('btnNovo').style.display = 'inline-flex';
+    document.getElementById('btnLimpar').style.display = 'inline-flex';
+    document.getElementById('btnSalvar').style.display = 'none';
+    document.getElementById('btnAlterar').style.display = 'none';
+    document.getElementById('btnExcluir').style.display = 'none';
+    document.getElementById('btnInativar').style.display = 'none';
+    
+    if (filtro === 'ativos' && funcionarioSelecionado) {
+        // Funcionário ativo selecionado
+        document.getElementById('btnAlterar').style.display = 'inline-flex';
+        document.getElementById('btnExcluir').style.display = 'inline-flex';
+        document.getElementById('btnInativar').innerHTML = '<i class="fas fa-ban"></i> Inativar';
+        document.getElementById('btnInativar').style.display = 'inline-flex';
+    } else if (filtro === 'inativos' && funcionarioSelecionado) {
+        // Funcionário inativo selecionado
+        document.getElementById('btnAlterar').style.display = 'inline-flex';
+        document.getElementById('btnExcluir').style.display = 'inline-flex';
+        document.getElementById('btnInativar').innerHTML = '<i class="fas fa-check"></i> Ativar';
+        document.getElementById('btnInativar').style.display = 'inline-flex';
+    } else if (temNome && temCargo && !funcionarioSelecionado) {
+        // Novo funcionário com dados digitados
+        document.getElementById('btnSalvar').style.display = 'inline-flex';
+    }
+}
+
+function inativarFuncionario() {
+    if (!funcionarioSelecionado) return;
+    
+    // Buscar o funcionário atual para saber se está ativo ou inativo
+    fetch(`/api/funcionarios?busca=&ativo=todos`)
+        .then(r => r.json())
+        .then(funcionarios => {
+            const f = funcionarios.find(func => func.id === funcionarioSelecionado);
+            if (f) {
+                const novoStatus = !f.ativo;
+                const acao = novoStatus ? 'ativar' : 'inativar';
+                
+                if (confirm(`Deseja realmente ${acao} este funcionário?`)) {
+                    // Atualizar apenas o status
+                    const data = {
+                        nome: f.nome,
+                        cargo: f.cargo,
+                        cpf: f.cpf,
+                        email: f.email,
+                        celular: f.celular,
+                        endereco: f.endereco,
+                        cidade: f.cidade,
+                        uf: f.uf,
+                        cep: f.cep,
+                        data_admissao: f.data_admissao,
+                        ativo: novoStatus
+                    };
+                    
+                    fetch(`/api/funcionarios/${funcionarioSelecionado}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(data)
+                    })
+                    .then(r => r.json())
+                    .then(result => {
+                        if (result.success) {
+                            alert(`Funcionário ${acao === 'ativar' ? 'ativado' : 'inativado'} com sucesso!`);
+                            carregarFuncionarios();
+                            novoFuncionario();
+                        }
+                    });
+                }
+            }
+        });
+}
+
+function salvarFuncionario() {
+    const id = document.getElementById('funcionarioId').value;
+    const data = {
+        nome: document.getElementById('nome').value,
+        cargo: document.getElementById('cargo').value,
+        cpf: document.getElementById('cpf').value,
+        email: document.getElementById('email').value,
+        celular: document.getElementById('celular').value,
+        endereco: document.getElementById('endereco').value,
+        cidade: document.getElementById('cidade').value,
+        uf: document.getElementById('uf').value,
+        cep: document.getElementById('cep').value,
+        data_admissao: document.getElementById('dataAdmissao').value || null,
+        ativo: true
+    };
+    
+    const url = id ? `/api/funcionarios/${id}` : '/api/funcionarios';
+    const method = id ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(r => {
+        if (!r.ok) {
+            return r.text().then(text => {
+                throw new Error(`HTTP ${r.status}: ${text}`);
+            });
+        }
+        return r.json();
+    })
+    .then(result => {
+        if (result.success) {
+            alert(id ? 'Funcionário alterado com sucesso!' : 'Funcionário cadastrado com sucesso!');
+            carregarFuncionarios();
+            novoFuncionario();
+        } else {
+            alert('Erro: ' + (result.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        alert('Erro ao salvar funcionário: ' + error);
+    });
+}
+
+function excluirFuncionario() {
+    if (!funcionarioSelecionado) return;
+    
+    if (confirm('Deseja realmente excluir este funcionário?')) {
+        fetch(`/api/funcionarios/${funcionarioSelecionado}`, {method: 'DELETE'})
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Funcionário excluído!');
+                    carregarFuncionarios();
+                    novoFuncionario();
+                }
+            });
+    }
+}
+
+function inativarFuncionario() {
+    if (!funcionarioSelecionado) return;
+    
+    // Buscar o funcionário atual para saber se está ativo ou inativo
+    fetch(`/api/funcionarios?busca=&ativo=todos`)
+        .then(r => r.json())
+        .then(funcionarios => {
+            const f = funcionarios.find(func => func.id === funcionarioSelecionado);
+            if (f) {
+                const novoStatus = !f.ativo;
+                const acao = novoStatus ? 'ativar' : 'inativar';
+                
+                if (confirm(`Deseja realmente ${acao} este funcionário?`)) {
+                    // Atualizar apenas o status
+                    const data = {
+                        nome: f.nome,
+                        cargo: f.cargo,
+                        cpf: f.cpf,
+                        email: f.email,
+                        celular: f.celular,
+                        endereco: f.endereco,
+                        cidade: f.cidade,
+                        uf: f.uf,
+                        cep: f.cep,
+                        data_admissao: f.data_admissao,
+                        ativo: novoStatus
+                    };
+                    
+                    fetch(`/api/funcionarios/${funcionarioSelecionado}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(data)
+                    })
+                    .then(r => r.json())
+                    .then(result => {
+                        if (result.success) {
+                            alert(`Funcionário ${acao === 'ativar' ? 'ativado' : 'inativado'} com sucesso!`);
+                            carregarFuncionarios();
+                            novoFuncionario();
+                        }
+                    });
+                }
+            }
+        });
+}
+
+function buscarCEP() {
+    const cep = document.getElementById('cep').value.replace(/\D/g, '');
+    
+    if (cep.length === 8) {
+        fetch(`https://viacep.com.br/ws/${cep}/json/`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.erro) {
+                    document.getElementById('endereco').value = data.logradouro;
+                    document.getElementById('cidade').value = data.localidade;
+                    document.getElementById('uf').value = data.uf;
+                } else {
+                    alert('CEP não encontrado!');
+                }
+            })
+            .catch(() => {
+                alert('Erro ao buscar CEP!');
+            });
+    }
+}
+
+function calcularTempoEmpresa() {
+    const dataAdmissao = document.getElementById('dataAdmissao').value;
+    
+    if (!dataAdmissao) {
+        document.getElementById('tempoEmpresa').value = '';
+        return;
+    }
+    
+    const admissao = new Date(dataAdmissao + 'T00:00:00');
+    const hoje = new Date();
+    
+    let anos = hoje.getFullYear() - admissao.getFullYear();
+    let meses = hoje.getMonth() - admissao.getMonth();
+    let dias = hoje.getDate() - admissao.getDate();
+    
+    if (dias < 0) {
+        meses--;
+        const ultimoDiaMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0).getDate();
+        dias += ultimoDiaMesAnterior;
+    }
+    
+    if (meses < 0) {
+        anos--;
+        meses += 12;
+    }
+    
+    let tempo = '';
+    if (anos > 0) {
+        tempo += `${anos} ano${anos > 1 ? 's' : ''}`;
+    }
+    if (meses > 0) {
+        if (tempo) tempo += ', ';
+        tempo += `${meses} ${meses > 1 ? 'meses' : 'mês'}`;
+    }
+    if (dias > 0 && anos === 0) {
+        if (tempo) tempo += ' e ';
+        tempo += `${dias} dia${dias > 1 ? 's' : ''}`;
+    }
+    
+    if (!tempo) {
+        tempo = 'Menos de 1 dia';
+    }
+    
+    document.getElementById('tempoEmpresa').value = tempo;
+}
+
+// Listener global para fechar modais com ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modais = document.querySelectorAll('[id*="modal"]');
+        modais.forEach(modal => {
+            if (modal && modal.style.display !== 'none') {
+                modal.remove();
+            }
+        });
+    }
+});
+
+function exportarExcel() {
+    const busca = document.getElementById('busca').value;
+    const filtro = document.querySelector('input[name="filtro"]:checked').value;
+    
+    const params = new URLSearchParams();
+    params.append('busca', busca);
+    params.append('ativo', filtro);
+    
+    window.location.href = '/api/exportar-funcionarios-excel?' + params.toString();
+}
+
+function abrirModalImportacao() {
+    const modal = document.createElement('div');
+    modal.id = 'modalImportacao';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 10px; max-width: 600px; width: 90%;">
+            <h2 style="margin-top: 0; color: #2c3e50;">
+                <i class="fas fa-file-upload"></i> Importar Funcionários do Excel
+            </h2>
+            
+            <p style="color: #7f8c8d; margin: 15px 0;">
+                Selecione um arquivo Excel com os funcionários a importar.
+            </p>
+            
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 10px; font-weight: bold; color: #2c3e50;">
+                    Arquivo Excel:
+                </label>
+                <input type="file" id="arquivoExcel" accept=".xlsx,.xls" 
+                       style="width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 5px;">
+            </div>
+            
+            <div id="progressoImportacao" style="display: none; margin: 20px 0;">
+                <div style="background: #ecf0f1; border-radius: 10px; height: 30px; overflow: hidden;">
+                    <div id="barraProgresso" style="background: #3498db; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                </div>
+                <p id="textoProgresso" style="text-align: center; margin-top: 10px; color: #2c3e50;"></p>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button onclick="fecharModalImportacao()" 
+                        style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Cancelar
+                </button>
+                <button onclick="importarFuncionarios()" 
+                        style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <i class="fas fa-upload"></i> Importar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function fecharModalImportacao() {
+    const modal = document.getElementById('modalImportacao');
+    
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function importarFuncionarios() {
+    const arquivo = document.getElementById('arquivoExcel').files[0];
+    
+    if (!arquivo) {
+        alert('Selecione um arquivo Excel!');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('arquivo', arquivo);
+    
+    // Mostrar progresso
+    document.getElementById('progressoImportacao').style.display = 'block';
+    document.getElementById('barraProgresso').style.width = '30%';
+    document.getElementById('textoProgresso').textContent = 'Processando arquivo...';
+    
+    fetch('/api/importar-funcionarios-excel', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(result => {
+        document.getElementById('barraProgresso').style.width = '100%';
+        
+        if (result.success) {
+            document.getElementById('textoProgresso').textContent = 
+                `✓ Importação concluída! ${result.importados} funcionários importados.`;
+            document.getElementById('barraProgresso').style.background = '#27ae60';
+            
+            setTimeout(() => {
+                fecharModalImportacao();
+                carregarFuncionarios();
+                alert(`Importação concluída com sucesso!\n\n` +
+                      `Funcionários importados: ${result.importados}\n` +
+                      (result.erros && result.erros.length > 0 ? 
+                       `\nAvisos:\n${result.erros.join('\n')}` : ''));
+            }, 1500);
+        } else {
+            document.getElementById('textoProgresso').textContent = '✗ Erro na importação';
+            document.getElementById('barraProgresso').style.background = '#e74c3c';
+            alert('Erro ao importar funcionários:\n' + result.message);
+        }
+    })
+    .catch(error => {
+        document.getElementById('barraProgresso').style.width = '100%';
+        document.getElementById('barraProgresso').style.background = '#e74c3c';
+        document.getElementById('textoProgresso').textContent = '✗ Erro na importação';
+        alert('Erro ao importar funcionários: ' + error);
+    });
+}
+</script>
+{% endblock %}

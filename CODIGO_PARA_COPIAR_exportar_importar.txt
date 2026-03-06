@@ -1,0 +1,119 @@
+===================================================================================
+CÓDIGO PARA COPIAR - EXPORTAR E IMPORTAR PRODUTOS
+===================================================================================
+
+Este arquivo contém o código que funcionava na pasta antiga.
+REVISE ANTES de eu adicionar no sistema atual!
+
+===================================================================================
+1. FUNÇÃO EXPORTAR PRODUTOS PARA EXCEL
+===================================================================================
+
+@app.route('/api/exportar-produtos-excel')
+def exportar_produtos_excel():
+    from flask import send_file
+
+    busca = request.args.get('busca', '')
+    ativo = request.args.get('ativo', 'ativos')
+
+    query = Produto.query
+
+    if busca:
+        query = query.filter(Produto.descricao.like(f'%{busca}%'))
+
+    if ativo == 'ativos':
+        query = query.filter(Produto.ativo == True)
+    elif ativo == 'inativos':
+        query = query.filter(Produto.ativo == False)
+
+    produtos = query.order_by(Produto.descricao).all()
+
+    # Preparar dados
+    headers = ['Código', 'Descrição', 'Cód.Barras', 'Unidade', 'Marca', 'Categoria', 'Fornecedor', 'R$ Compra', 'R$ Venda', 'Est.Mín', 'Est.Máx', 'Status']
+    dados = []
+
+    for p in produtos:
+        dados.append([
+            p.codigo,
+            p.descricao,
+            p.codigo_barras or '',
+            p.unidade or '',
+            p.marca or '',
+            p.categoria or '',
+            p.fornecedor or '',
+            p.preco_compra or 0,
+            p.preco_venda or 0,
+            p.estoque_minimo or 0,
+            p.estoque_maximo or 0,
+            'Ativo' if p.ativo else 'Inativo'
+        ])
+
+    # Usar função padrão
+    output = criar_excel_padrao('Produtos', headers, dados, 'produtos.xlsx')
+
+    return send_file(output, download_name='produtos.xlsx', as_attachment=True, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+===================================================================================
+2. INÍCIO DA FUNÇÃO IMPORTAR PRODUTOS DO EXCEL
+===================================================================================
+
+@app.route('/api/importar-produtos-excel', methods=['POST'])
+def importar_produtos_excel():
+    """Importar produtos em massa a partir de planilha Excel"""
+    try:
+        import pandas as pd
+        from io import BytesIO
+
+        if 'arquivo' not in request.files:
+            return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'})
+
+        arquivo = request.files['arquivo']
+
+        if arquivo.filename == '':
+            return jsonify({'success': False, 'message': 'Nenhum arquivo selecionado'})
+
+        if not arquivo.filename.endswith(('.xlsx', '.xls')):
+            return jsonify({'success': False, 'message': 'Formato inválido. Use apenas .xlsx ou .xls'})
+
+        # Ler o arquivo Excel
+        df = pd.read_excel(arquivo, header=None)  # Ler sem assumir cabeçalho
+
+        # Procurar a linha que contém "Descrição" ou "Código" (cabeçalhos reais)
+        linha_cabecalho = 0
+        for i in range(min(10, len(df))):  # Verificar até 10 primeiras linhas
+            linha_str = ' '.join([str(x).upper() for x in df.iloc[i].values if pd.notna(x)])
+            if 'DESCRIÇÃO' in linha_str or 'DESCRICAO' in linha_str or 'CÓDIGO' in linha_str or 'CODIGO' in linha_str:
+                linha_cabecalho = i
+                break
+
+        # Reler o arquivo com o cabeçalho correto
+        df = pd.read_excel(arquivo, header=linha_cabecalho)
+
+        # Remover colunas completamente vazias (Unnamed)
+        df = df.loc[:, ~df.columns.astype(str).str.contains('^Unnamed', na=False)]
+
+        # Limpar nomes das colunas (remover espaços extras e converter para string)
+        # Filtrar colunas com nome "nan" ou vazias
+        colunas_validas = []
+        for col in df.columns:
+            col_str = str(col).strip()
+            # Ignorar colunas vazias ou "nan"
+            if col_str and col_str.lower() not in ['nan', 'none', '']:
+                colunas_validas.append(col)
+
+        # Manter apenas colunas válidas
+        df = df[colunas_validas]
+
+        # Renomear colunas para garantir que são strings limpas
+        df.columns = [str(col).strip() for col in df.columns]
+
+        # ... (CONTINUA - preciso pegar o resto do código)
+
+===================================================================================
+AÇÃO NECESSÁRIA:
+===================================================================================
+
+1. Você quer que eu copie o arquivo COMPLETO daquela pasta para cá?
+2. Ou quer que eu extraia APENAS essas duas funções e substitua no sistema atual?
+
+AGUARDANDO SUA CONFIRMAÇÃO ANTES DE FAZER QUALQUER MUDANÇA!

@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+
+{% block title %}Empréstimo Múltiplo{% endblock %}
+
+{% block content %}
+<style>
+body {
+    background: #f0f0f0 !important;
+}
+
+.multiplo-container {
+    padding: 10px;
+    background: #f0f0f0;
+    height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+}
+
+.titulo {
+    font-size: 18px;
+    font-weight: bold;
+    color: #007bff;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.linha-campo {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.campo {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.campo label {
+    font-size: 10px;
+    font-weight: normal;
+}
+
+.campo input,
+.campo select {
+    padding: 2px 5px;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    font-size: 10px;
+    height: 24px;
+}
+
+.tabela-container {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.tabela-area {
+    flex: 1;
+    border: 1px solid #ccc;
+    background: white;
+    overflow: auto;
+}
+
+.table-multiplo {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+}
+
+.table-multiplo thead {
+    background-color: #4a5568;
+    color: white;
+    position: sticky;
+    top: 0;
+}
+
+.table-multiplo th {
+    padding: 6px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 10px;
+}
+
+.table-multiplo td {
+    padding: 4px 6px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.table-multiplo tbody tr:hover {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.table-multiplo tbody tr.selected {
+    background-color: #cfe2ff;
+}
+
+.botoes-lateral {
+    width: 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.btn-lateral {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+}
+
+.btn-inserir {
+    background-color: #ffc107;
+    color: black;
+}
+
+.btn-excluir {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-limpar {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-finalizar {
+    background-color: #28a745;
+    color: white;
+}
+
+.total-box {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.total-box label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.total-box .valor {
+    background: #e9ecef;
+    color: #2c3e50;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.obs-linha {
+    margin-bottom: 10px;
+}
+
+.obs-linha label {
+    display: block;
+    font-size: 10px;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.obs-linha input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    font-size: 10px;
+}
+</style>
+
+<div class="multiplo-container">
+    <div class="titulo">Empréstimo Múltiplo</div>
+    
+    <!-- Linha: Data e Funcionário -->
+    <div class="linha-campo">
+        <div class="campo">
+            <label>Data</label>
+            <input type="text" id="data" style="width: 100px;" readonly>
+        </div>
+        <div class="campo" style="flex: 1;">
+            <label>Funcionário</label>
+            <select id="funcionario" style="width: 100%;">
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Linha: Código, Descrição, Qtde, Inserir -->
+    <div class="linha-campo">
+        <div class="campo">
+            <label>Código Produto</label>
+            <input type="text" id="codProduto" style="width: 70px;">
+        </div>
+        <div class="campo" style="flex: 1;">
+            <label>Descrição do Item</label>
+            <select id="descricaoItem" style="width: 100%;">
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+        <div class="campo">
+            <label>Qtde</label>
+            <input type="number" id="quantidade" value="1" style="width: 50px;">
+        </div>
+        <button class="btn-lateral btn-inserir" onclick="inserirItem()" style="width: auto; padding: 4px 16px;">
+            💡 Inserir
+        </button>
+    </div>
+    
+    <!-- Tabela e Botões Laterais -->
+    <div class="tabela-container">
+        <div class="tabela-area">
+            <table class="table-multiplo">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Código</th>
+                        <th>Descrição</th>
+                        <th style="width: 80px;">Qtde</th>
+                        <th style="width: 120px;">Estoque Disponível</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaItens">
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 30px; color: #95a5a6;">
+                            Nenhum item adicionado
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="botoes-lateral">
+            <button class="btn-lateral btn-excluir" onclick="excluirItem()">
+                🗑️ Excluir
+            </button>
+            <button class="btn-lateral btn-limpar" onclick="limparItens()">
+                🧹 Limpar
+            </button>
+            <button class="btn-lateral btn-finalizar" onclick="finalizarEmprestimo()">
+                ✅ Finalizar
+            </button>
+            
+            <div class="total-box">
+                <label>Total de Itens</label>
+                <div class="valor" id="totalItens">0</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Observação -->
+    <div class="obs-linha">
+        <label>Observação</label>
+        <input type="text" id="observacao">
+    </div>
+</div>
+
+<script>
+let itensEmprestimo = [];
+let produtosMap = {};
+let linhaSelecionada = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const hoje = new Date();
+    document.getElementById('data').value = hoje.toLocaleDateString('pt-BR');
+    
+    carregarFuncionarios();
+    carregarProdutos();
+    
+    // ESC para voltar
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            window.location.href = '/emprestimos';
+        }
+    }, true);
+    
+    // Enter no código busca produto
+    document.getElementById('codProduto').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            buscarProdutoPorCodigo();
+        }
+    });
+    
+    // Ao selecionar produto, preenche código
+    document.getElementById('descricaoItem').addEventListener('change', aoSelecionarProduto);
+});
+
+function carregarFuncionarios() {
+    fetch('/api/funcionarios?ativo=ativos')
+        .then(r => r.json())
+        .then(funcionarios => {
+            const select = document.getElementById('funcionario');
+            funcionarios.forEach(f => {
+                select.add(new Option(f.nome, f.nome));
+            });
+        });
+}
+
+function carregarProdutos() {
+    fetch('/api/produtos?ativo=ativos')
+        .then(r => r.json())
+        .then(produtos => {
+            const select = document.getElementById('descricaoItem');
+            produtos.forEach(p => {
+                const texto = `${p.descricao} (${p.codigo})`;
+                produtosMap[p.codigo] = {
+                    descricao: p.descricao,
+                    estoque_atual: p.estoque_atual,
+                    emprestados: p.emprestados || 0
+                };
+                select.add(new Option(texto, p.codigo));
+            });
+        });
+}
+
+function buscarProdutoPorCodigo() {
+    const codigo = document.getElementById('codProduto').value;
+    if (codigo && produtosMap[codigo]) {
+        document.getElementById('descricaoItem').value = codigo;
+    }
+}
+
+function aoSelecionarProduto() {
+    const codigo = document.getElementById('descricaoItem').value;
+    if (codigo) {
+        document.getElementById('codProduto').value = codigo;
+    }
+}
+
+function inserirItem() {
+    const codigo = document.getElementById('codProduto').value.trim();
+    const qtde = parseInt(document.getElementById('quantidade').value);
+    
+    if (!codigo) {
+        alert('Selecione um produto!');
+        return;
+    }
+    
+    if (!qtde || qtde <= 0) {
+        alert('Quantidade deve ser maior que zero!');
+        return;
+    }
+    
+    if (!produtosMap[codigo]) {
+        alert('Produto não encontrado!');
+        return;
+    }
+    
+    const produto = produtosMap[codigo];
+    const estoqueAtual = produto.estoque_atual;
+    const emprestados = produto.emprestados || 0;
+    
+    // CALCULAR ESTOQUE DISPONÍVEL = Estoque Atual - Já Emprestados
+    const estoqueDisponivel = estoqueAtual - emprestados;
+    
+    // Verificar quantidade já adicionada na lista
+    const qtdeJaAdicionada = itensEmprestimo
+        .filter(i => i.codigo === codigo)
+        .reduce((sum, i) => sum + i.quantidade, 0);
+    
+    // VALIDAÇÃO CRÍTICA: Não pode emprestar mais do que está disponível
+    if (estoqueDisponivel < (qtde + qtdeJaAdicionada)) {
+        alert(`❌ ESTOQUE INSUFICIENTE!\n\n` +
+              `Estoque Total: ${estoqueAtual}\n` +
+              `Já Emprestado: ${emprestados}\n` +
+              `Disponível: ${estoqueDisponivel}\n` +
+              `Já na lista: ${qtdeJaAdicionada}\n` +
+              `Solicitado: ${qtde}\n\n` +
+              `Você só pode emprestar ${estoqueDisponivel - qtdeJaAdicionada} unidade(s)!`);
+        return;
+    }
+    
+    const item = {
+        codigo: codigo,
+        descricao: produto.descricao,
+        quantidade: qtde,
+        estoque_disponivel: estoqueDisponivel
+    };
+    
+    itensEmprestimo.push(item);
+    atualizarTabela();
+    atualizarTotal();
+    
+    // Limpar campos
+    document.getElementById('codProduto').value = '';
+    document.getElementById('descricaoItem').value = '';
+    document.getElementById('quantidade').value = '1';
+}
+
+function atualizarTabela() {
+    const tbody = document.getElementById('tabelaItens');
+    
+    if (itensEmprestimo.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 30px; color: #95a5a6;">Nenhum item adicionado</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = itensEmprestimo.map((item, idx) => `
+        <tr onclick="selecionarLinha(${idx})" data-index="${idx}">
+            <td style="text-align: center;">${item.codigo}</td>
+            <td>${item.descricao}</td>
+            <td style="text-align: center;">${item.quantidade}</td>
+            <td style="text-align: center;">${item.estoque_disponivel}</td>
+        </tr>
+    `).join('');
+}
+
+function selecionarLinha(index) {
+    document.querySelectorAll('.table-multiplo tbody tr').forEach(tr => tr.classList.remove('selected'));
+    const tr = document.querySelector(`tr[data-index="${index}"]`);
+    if (tr) {
+        tr.classList.add('selected');
+        linhaSelecionada = index;
+    }
+}
+
+function excluirItem() {
+    if (linhaSelecionada === null) {
+        alert('Selecione um item!');
+        return;
+    }
+    
+    itensEmprestimo.splice(linhaSelecionada, 1);
+    linhaSelecionada = null;
+    atualizarTabela();
+    atualizarTotal();
+}
+
+function limparItens() {
+    if (itensEmprestimo.length === 0) return;
+    
+    if (confirm('Limpar todos os itens?')) {
+        itensEmprestimo = [];
+        linhaSelecionada = null;
+        atualizarTabela();
+        atualizarTotal();
+    }
+}
+
+function atualizarTotal() {
+    const total = itensEmprestimo.reduce((sum, i) => sum + i.quantidade, 0);
+    document.getElementById('totalItens').textContent = total;
+}
+
+function finalizarEmprestimo() {
+    if (itensEmprestimo.length === 0) {
+        alert('Adicione itens antes de finalizar!');
+        return;
+    }
+    
+    const funcionario = document.getElementById('funcionario').value;
+    const data = document.getElementById('data').value;
+    const observacao = document.getElementById('observacao').value;
+    
+    if (!funcionario) {
+        alert('Selecione um funcionário!');
+        return;
+    }
+    
+    const totalQuantidade = itensEmprestimo.reduce((sum, i) => sum + i.quantidade, 0);
+    
+    if (!confirm(`Finalizar empréstimo múltiplo?\n\nFuncionário: ${funcionario}\nTotal de itens: ${totalQuantidade}`)) {
+        return;
+    }
+    
+    // Converter data para formato ISO
+    const partesData = data.split('/');
+    const dataISO = `${partesData[2]}-${partesData[1]}-${partesData[0]}`;
+    
+    const dados = {
+        data: dataISO,
+        funcionario: funcionario,
+        observacao: observacao,
+        itens: itensEmprestimo
+    };
+    
+    fetch('/api/emprestimos/multiplo', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(dados)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert(`Empréstimo múltiplo finalizado!\n${result.total} itens emprestados para ${funcionario}`);
+            window.location.href = '/estoque';
+        } else {
+            alert(result.message || 'Erro ao finalizar empréstimo');
+        }
+    })
+    .catch(error => {
+        alert('Erro ao finalizar empréstimo: ' + error);
+    });
+}
+</script>
+{% endblock %}

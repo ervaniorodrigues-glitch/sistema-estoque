@@ -1,0 +1,1696 @@
+{% extends "base.html" %}
+
+{% block title %}Controle de Estoque{% endblock %}
+
+{% block content %}
+<div class="layout-with-list">
+    <!-- Listbox Lateral -->
+    <div class="sidebar-list">
+        <div class="list-header">
+            <input type="text" id="busca" class="list-search" placeholder="🔍 Busca Rápida...">
+        </div>
+        
+        <div class="list-filters">
+            <label style="margin-right: 10px;">
+                <input type="radio" name="filtro" value="todos" checked onchange="selecionarTodos()"> Todos
+            </label>
+            <label style="margin-right: 10px;">
+                <input type="radio" name="filtro" value="baixo" onchange="carregarProdutos()"> Estoque Baixo
+            </label>
+            <label>
+                <input type="radio" name="filtro" value="excedido" onchange="carregarProdutos()"> Excedido
+            </label>
+        </div>
+        
+        <div class="list-content" id="listaProdutos"></div>
+        
+        <div class="list-footer">
+            Total: <span id="totalProdutos">0</span>
+        </div>
+    </div>
+    
+    <!-- Área do Formulário -->
+    <div class="form-area">
+        <div class="toolbar">
+            <button class="toolbar-btn" style="background-color: #f39c12;" onclick="abrirEntrada(produtoSelecionado)">
+                <i class="fas fa-arrow-down"></i> Entrada
+            </button>
+            <button class="toolbar-btn" style="background-color: #e74c3c;" onclick="abrirSaida(produtoSelecionado)">
+                <i class="fas fa-arrow-up"></i> Saída
+            </button>
+            <button class="toolbar-btn" style="background-color: #9b59b6;" onclick="abrirCategoria()">
+                <i class="fas fa-tags"></i> Categoria
+            </button>
+            <button class="toolbar-btn" style="background-color: #3498db;" onclick="abrirEmprestimo()">
+                <i class="fas fa-handshake"></i> Empréstimo
+            </button>
+            <button class="toolbar-btn" style="background-color: #4a5568;" onclick="window.location.href='/movimentacoes'">
+                <i class="fas fa-exchange-alt"></i> Movimentações
+            </button>
+            <button class="toolbar-btn" style="background-color: #16a085;" onclick="window.location.href='/cadastros-diversos'">
+                <i class="fas fa-list-ul"></i> Cadastros Diversos
+            </button>
+        </div>
+        
+        <form id="formEstoque">
+            <input type="hidden" id="produtoId">
+            
+            <!-- Layout: Formulário com foto no canto direito -->
+            <div style="position: relative;">
+                <!-- Área da Foto - Posicionada no canto direito -->
+                <div style="position: absolute; top: 0; right: 0; width: 220px;">
+                    <label class="form-label">Foto do Produto</label>
+                    <div id="containerFoto" style="border: 2px solid #ffffff; border-radius: 4px; height: 250px; background-color: #ffffff; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 5px;">
+                        <img id="fotoPreview" src="/api/foto/imagem-padrao.jpg" alt="Foto do produto" style="max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: auto;">
+                        <span id="semFoto" style="color: #a0aec0; font-size: 14px; display: none; position: absolute;">Sem Foto</span>
+                    </div>
+                </div>
+                
+                <!-- Campos do Formulário -->
+                <div style="margin-right: 240px;">
+                    <div class="form-row">
+                        <div class="form-group small">
+                            <label class="form-label">ID</label>
+                            <input type="text" class="form-control" id="codigo" readonly tabindex="-1" style="background-color: #ffe6e6; border: 2px solid #bdc3c7;">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">Descrição do Item *</label>
+                            <input type="text" class="form-control" id="descricao" required style="border: 2px solid #bdc3c7;">
+                        </div>
+                    </div>
+                
+                    <div class="form-row">
+                        <div class="form-group medium">
+                            <label class="form-label">Unidade</label>
+                            <input type="text" class="form-control" id="unidade" style="border: 2px solid #bdc3c7;">
+                        </div>
+                        <div class="form-group medium">
+                            <label class="form-label">Marca</label>
+                            <input type="text" class="form-control" id="marca" style="border: 2px solid #bdc3c7;">
+                        </div>
+                        <div class="form-group" style="flex: 0 0 120px;">
+                            <label class="form-label">Categoria</label>
+                            <input type="text" class="form-control" id="categoria" style="border: 2px solid #bdc3c7;">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 0 0 350px;">
+                            <label class="form-label">Fornecedor</label>
+                            <input type="text" class="form-control" id="fornecedor" style="border: 2px solid #bdc3c7;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group small">
+                    <label class="form-label">R$ Compra</label>
+                    <input type="text" class="form-control" id="precoCompra" value="0.0" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group small">
+                    <label class="form-label">R$ Venda</label>
+                    <input type="text" class="form-control" id="precoVenda" value="0.0" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group small">
+                    <label class="form-label">Estoque Mínimo</label>
+                    <input type="number" class="form-control" id="estoqueMinimo" value="0" style="border: 2px solid #bdc3c7;">
+                </div>
+                <div class="form-group small">
+                    <label class="form-label">Estoque Máximo</label>
+                    <input type="number" class="form-control" id="estoqueMaximo" value="0" style="border: 2px solid #bdc3c7;">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group" style="flex: 0 0 500px;">
+                    <label class="form-label">Observação</label>
+                    <textarea class="form-control" id="observacao" rows="1" style="border: 2px solid #bdc3c7;"></textarea>
+                </div>
+            </div>
+            
+            <div class="form-row" style="background-color: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 6px; position: relative;">
+                <div class="form-group small" style="text-align: center;">
+                    <label class="form-label" style="font-weight: bold;">Entradas</label>
+                    <div style="font-size: 16px; font-weight: bold; color: #27ae60;" id="totalEntradas">0</div>
+                </div>
+                <div class="form-group small" style="text-align: center;">
+                    <label class="form-label" style="font-weight: bold;">Saídas</label>
+                    <div style="font-size: 16px; font-weight: bold; color: #e74c3c;" id="totalSaidas">0</div>
+                </div>
+                <div class="form-group small" style="text-align: center;">
+                    <label class="form-label" style="font-weight: bold;">Saldo em Estoque</label>
+                    <div style="font-size: 16px; font-weight: bold; color: #2c3e50;" id="saldoEstoque">0</div>
+                </div>
+                <div class="form-group small" style="text-align: center;">
+                    <label class="form-label" style="font-weight: bold;">Status</label>
+                    <div style="font-size: 12px; font-weight: bold; padding: 3px 8px; border-radius: 3px; background-color: #f39c12; color: white; display: none; white-space: nowrap; min-width: 120px;" id="statusEstoque">Normal</div>
+                </div>
+                <!-- Indicadores lado a lado - Posicionados à direita -->
+                <div style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; gap: 10px;">
+                    <!-- Valor Total Estoque -->
+                    <div style="text-align: center; padding: 8px 10px;">
+                        <label style="display: block; font-size: 11px; font-weight: bold; color: #2c3e50; margin-bottom: 2px;">Valor Total Estoque</label>
+                        <div style="font-size: 18px; font-weight: bold; color: #27ae60;" id="valorTotalEstoquePrincipal">R$ 0,00</div>
+                    </div>
+                    <!-- Valor Gasto -->
+                    <div style="text-align: center; padding: 8px 10px;">
+                        <label style="display: block; font-size: 11px; font-weight: bold; color: #2c3e50; margin-bottom: 2px;">Valor Gasto</label>
+                        <div style="font-size: 18px; font-weight: bold; color: #e74c3c;" id="valorGastoPrincipal">R$ 0,00</div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let produtoSelecionado = null;
+let produtosCache = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Carregar produtos e iniciar com "Todos" selecionado
+    carregarProdutos();
+    limparFormulario();
+    
+    document.getElementById('totalEntradas').style.display = 'none';
+    document.getElementById('totalSaidas').style.display = 'none';
+    document.getElementById('saldoEstoque').style.display = 'none';
+    document.getElementById('statusEstoque').style.display = 'none';
+    
+    // Carregar totais gerais ao iniciar (modo "Todos")
+    carregarTotaisGerais();
+    
+    document.getElementById('busca').addEventListener('input', carregarProdutos);
+});
+
+function selecionarTodos() {
+    produtoSelecionado = null;
+    document.querySelectorAll('.list-item').forEach(item => item.classList.remove('selected'));
+    limparFormulario();
+    
+    // Mostrar os indicadores de totais gerais
+    document.getElementById('totalEntradas').style.display = 'none';
+    document.getElementById('totalSaidas').style.display = 'none';
+    document.getElementById('saldoEstoque').style.display = 'none';
+    document.getElementById('statusEstoque').style.display = 'none';
+    
+    // Carregar totais gerais de todas as movimentações
+    carregarTotaisGerais();
+    
+    carregarProdutos();
+}
+
+function carregarTotaisGerais() {
+    // Buscar todas as movimentações para calcular totais gerais
+    fetch('/api/movimentacoes')
+        .then(r => r.json())
+        .then(movimentacoes => {
+            let totalEntradas = 0;
+            let totalSaidas = 0;
+            
+            movimentacoes.forEach(m => {
+                if (m.tipo === 'ENTRADA') {
+                    totalEntradas += (m.valor_total || 0);
+                } else if (m.tipo === 'SAIDA') {
+                    totalSaidas += (m.valor_total || 0);
+                }
+            });
+            
+            // Atualizar os indicadores principais
+            document.getElementById('valorTotalEstoquePrincipal').textContent = 
+                totalEntradas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('valorGastoPrincipal').textContent = 
+                totalSaidas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        })
+        .catch(err => {
+            console.error('Erro ao carregar totais gerais:', err);
+        });
+}
+
+function limparFormulario() {
+    document.getElementById('produtoId').value = '';
+    document.getElementById('codigo').value = '';
+    document.getElementById('descricao').value = '';
+    document.getElementById('unidade').value = '';
+    document.getElementById('marca').value = '';
+    document.getElementById('categoria').value = '';
+    document.getElementById('fornecedor').value = '';
+    document.getElementById('precoCompra').value = 'R$ 0,00';
+    document.getElementById('precoVenda').value = 'R$ 0,00';
+    document.getElementById('estoqueMinimo').value = 0;
+    document.getElementById('estoqueMaximo').value = 0;
+    document.getElementById('observacao').value = '';
+    document.getElementById('fotoPreview').src = '/api/foto/imagem-padrao.jpg';
+}
+
+function carregarProdutos() {
+    const busca = document.getElementById('busca').value;
+    const filtro = document.querySelector('input[name="filtro"]:checked');
+    const filtroValue = filtro ? filtro.value : 'todos';
+    
+    fetch(`/api/produtos?busca=${busca}&ativo=ativos`)
+        .then(r => r.json())
+        .then(produtos => {
+            produtosCache = produtos;
+            
+            let produtosFiltrados = produtos;
+            if (filtroValue === 'baixo') {
+                produtosFiltrados = produtos.filter(p => p.estoque_atual > 0 && p.estoque_atual <= p.estoque_minimo);
+            } else if (filtroValue === 'excedido') {
+                produtosFiltrados = produtos.filter(p => p.estoque_atual > p.estoque_maximo);
+            }
+            
+            const lista = document.getElementById('listaProdutos');
+            lista.innerHTML = produtosFiltrados.map(p => `
+                <div class="list-item" onclick="selecionarProduto(${p.codigo})" id="item-${p.codigo}">
+                    ${p.descricao}
+                </div>
+            `).join('');
+            
+            document.getElementById('totalProdutos').textContent = produtosFiltrados.length;
+        });
+}
+
+function selecionarProduto(codigo) {
+    document.querySelectorAll('input[name="filtro"]').forEach(radio => radio.checked = false);
+    document.querySelectorAll('.list-item').forEach(item => item.classList.remove('selected'));
+    document.getElementById(`item-${codigo}`).classList.add('selected');
+    
+    document.getElementById('totalEntradas').style.display = 'block';
+    document.getElementById('totalSaidas').style.display = 'block';
+    document.getElementById('saldoEstoque').style.display = 'block';
+    document.getElementById('statusEstoque').style.display = 'block';
+    
+    if (produtosCache) {
+        const p = produtosCache.find(prod => prod.codigo === codigo);
+        if (p) {
+            preencherFormulario(p);
+            carregarMovimentacoesProduto(codigo);
+        }
+    }
+}
+
+function preencherFormulario(p) {
+    produtoSelecionado = p.codigo;
+    document.getElementById('produtoId').value = p.codigo;
+    document.getElementById('codigo').value = p.codigo;
+    document.getElementById('descricao').value = p.descricao || '';
+    document.getElementById('unidade').value = p.unidade || '';
+    document.getElementById('marca').value = p.marca || '';
+    document.getElementById('categoria').value = p.categoria || '';
+    document.getElementById('fornecedor').value = p.fornecedor || '';
+    
+    // Formatar preços em Real
+    const precoCompra = (p.preco_compra || 0);
+    const precoVenda = (p.preco_venda || 0);
+    document.getElementById('precoCompra').value = precoCompra.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    });
+    document.getElementById('precoVenda').value = precoVenda.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    });
+    
+    document.getElementById('estoqueMinimo').value = p.estoque_minimo || 0;
+    document.getElementById('estoqueMaximo').value = p.estoque_maximo || 0;
+    document.getElementById('observacao').value = p.observacao || '';
+    
+    atualizarPreviewFoto(p.foto);
+    document.getElementById('saldoEstoque').textContent = p.estoque_atual || 0;
+    
+    const valorTotal = (p.estoque_atual || 0) * (p.preco_compra || 0);
+    document.getElementById('valorTotalEstoquePrincipal').textContent = 'R$ ' + valorTotal.toFixed(2).replace('.', ',');
+    
+    const statusDiv = document.getElementById('statusEstoque');
+    statusDiv.style.display = 'block';
+    
+    if (p.emprestados && p.emprestados > 0) {
+        statusDiv.textContent = `Emprestado (${p.emprestados})`;
+        statusDiv.style.backgroundColor = '#007bff';
+    } else if (p.estoque_atual === 0 || p.estoque_atual === null) {
+        statusDiv.textContent = 'Estoque Zerado';
+        statusDiv.style.backgroundColor = '#95a5a6';
+    } else if (p.estoque_atual > 0 && p.estoque_atual < p.estoque_minimo) {
+        statusDiv.textContent = 'Estoque Baixo';
+        statusDiv.style.backgroundColor = '#e74c3c';
+    } else if (p.estoque_atual > p.estoque_maximo) {
+        statusDiv.textContent = 'Estoque Excedido';
+        statusDiv.style.backgroundColor = '#f39c12';
+    } else {
+        statusDiv.textContent = 'Normal';
+        statusDiv.style.backgroundColor = '#27ae60';
+    }
+}
+
+function carregarMovimentacoesProduto(codigo) {
+    fetch(`/api/movimentacoes/${codigo}`)
+        .then(r => r.json())
+        .then(movimentacoes => {
+            let totalEntradas = 0;
+            let totalSaidas = 0;
+            let valorGasto = 0;
+            
+            if (movimentacoes && Array.isArray(movimentacoes)) {
+                movimentacoes.forEach(m => {
+                    if (m.tipo === 'ENTRADA') {
+                        totalEntradas += m.quantidade;
+                    } else if (m.tipo === 'SAIDA') {
+                        totalSaidas += m.quantidade;
+                        valorGasto += (m.valor_total || 0);
+                    }
+                });
+            }
+            
+            document.getElementById('totalEntradas').textContent = totalEntradas;
+            document.getElementById('totalSaidas').textContent = totalSaidas;
+            document.getElementById('valorGastoPrincipal').textContent = 'R$ ' + valorGasto.toFixed(2).replace('.', ',');
+        })
+        .catch(err => {
+            document.getElementById('totalEntradas').textContent = '0';
+            document.getElementById('totalSaidas').textContent = '0';
+            document.getElementById('valorGastoPrincipal').textContent = 'R$ 0,00';
+        });
+}
+
+function abrirEntrada(codigoProduto = null) {
+    console.log('abrirEntrada chamado com código:', codigoProduto);
+    
+    // Criar modal de entrada múltipla
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;';
+    modal.innerHTML = `
+        <div style="background: white; padding: 10px; border-radius: 10px; width: 70%; max-width: 850px; height: 85vh; display: flex; flex-direction: column;">
+            <h3 style="margin: 0 0 6px 0; color: #27ae60; text-align: center; font-size: 16px;">
+                <i class="fas fa-box-open"></i> ENTRADA DE ESTOQUE
+            </h3>
+            
+            <!-- Campos do cabeçalho -->
+            <div style="display: flex; gap: 4px; margin-bottom: 4px; flex-shrink: 0;">
+                <div style="flex: 0 0 100px;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 11px;">Data</label>
+                    <input type="date" id="entradaData" class="form-control" readonly style="background-color: #f0f0f0; padding: 2px 4px; font-size: 11px; height: 24px; border: 1px solid #bdc3c7;" tabindex="-1">
+                </div>
+                <div style="flex: 0 0 130px;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 11px;">Nº Nota Fiscal</label>
+                    <input id="entradaNota" class="form-control" style="padding: 2px 4px; font-size: 11px; height: 24px; border: 1px solid #bdc3c7;">
+                </div>
+                <div style="flex: 0 0 200px;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 11px;">Fornecedor</label>
+                    <select id="entradaFornecedor" class="form-control" style="padding: 2px 4px; font-size: 11px; height: 24px; border: 1px solid #bdc3c7;">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+                <div style="flex: 0 0 200px;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 11px;">Operação</label>
+                    <select id="entradaOperacao" class="form-control" style="padding: 2px 4px; font-size: 11px; height: 24px; border: 1px solid #bdc3c7;">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Campos de item -->
+            <div style="display: flex; gap: 4px; margin-bottom: 4px; padding: 4px; background-color: #f8f9fa; border-radius: 5px; flex-shrink: 0;">
+                <div style="flex: 0 0 350px;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 11px;">Descrição do Item *</label>
+                    <select id="entradaDescricao" class="form-control" autofocus style="padding: 2px 4px; font-size: 11px; height: 24px; border: 1px solid #bdc3c7;">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+                <div style="flex: 0 0 80px;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 11px;">Preço</label>
+                    <input type="number" id="entradaPreco" class="form-control" step="0.01" value="0" style="padding: 2px 4px; font-size: 11px; height: 24px; border: 1px solid #bdc3c7;">
+                </div>
+                <div style="flex: 0 0 60px;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 11px;">Qtd *</label>
+                    <input id="entradaQuantidade" class="form-control" value="1" style="padding: 2px 4px; font-size: 11px; height: 24px; border: 1px solid #bdc3c7;">
+                </div>
+                <div style="flex: 0 0 80px;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 11px;">Total</label>
+                    <input type="number" id="entradaTotal" class="form-control" readonly style="background-color: #f0f0f0; padding: 2px 4px; font-size: 11px; height: 24px; border: 1px solid #bdc3c7;">
+                </div>
+                <div style="flex: 0 0 55px; display: flex; align-items: flex-end;">
+                    <button type="button" class="btn btn-warning" onclick="inserirItemEntrada()" style="width: 100%; padding: 2px 4px; font-size: 11px; height: 24px;">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tabela de itens (com scroll) -->
+            <div style="flex: 1; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; margin-bottom: 2px; min-height: 0;">
+                <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                    <thead style="background-color: #34495e; color: white; position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th style="padding: 3px 6px; text-align: left; font-size: 13px; width: 70px;">Código</th>
+                            <th style="padding: 3px 6px; text-align: left; font-size: 13px; width: auto;">Descrição</th>
+                            <th style="padding: 3px 6px; text-align: right; font-size: 13px; width: 70px;">Qtd</th>
+                            <th style="padding: 3px 6px; text-align: right; font-size: 13px; width: 110px;">Preço</th>
+                            <th style="padding: 3px 6px; text-align: right; font-size: 13px; width: 110px;">Total</th>
+                            <th style="padding: 3px 6px; text-align: center; width: 70px; font-size: 13px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaItensEntrada" style="font-size: 13px;">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 20px; color: #95a5a6;">
+                                Nenhum item adicionado
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Observação e Total -->
+            <div style="display: flex; gap: 6px; margin-bottom: 2px; flex-shrink: 0; align-items: flex-end;">
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 10px;">Observação</label>
+                    <input type="text" id="entradaObservacao" class="form-control" style="padding: 2px 4px; font-size: 10px; border: 1px solid #bdc3c7; height: 32px;">
+                </div>
+                <div style="flex: 0 0 140px;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 10px; text-align: center;">Total da Entrada</label>
+                    <div style="background-color: #27ae60; color: white; padding: 6px; border-radius: 5px; text-align: center; height: 32px; display: flex; align-items: center; justify-content: center;">
+                        <div style="font-size: 16px; font-weight: bold;">R$ <span id="totalGeralEntrada">0,00</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botões -->
+            <div style="display: flex; gap: 4px; justify-content: flex-end; flex-shrink: 0;">
+                <button type="button" class="btn btn-secondary" onclick="limparCamposEntrada()" style="padding: 4px 8px; font-size: 10px;">
+                    <i class="fas fa-broom"></i> Limpar
+                </button>
+                <button type="button" class="btn btn-danger" onclick="fecharModalEntrada()" style="padding: 4px 8px; font-size: 10px;">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="finalizarEntradaMultipla()" style="padding: 4px 8px; font-size: 10px;">
+                    <i class="fas fa-check"></i> Finalizar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.id = 'modalEntradaMultipla';
+    
+    // Adicionar evento ESC para fechar
+    document.addEventListener('keydown', function fecharComESC(e) {
+        if (e.key === 'Escape') {
+            fecharModalEntrada();
+            document.removeEventListener('keydown', fecharComESC);
+        }
+    });
+    
+    // Inicializar
+    window.itensEntradaMultipla = [];
+    document.getElementById('entradaData').valueAsDate = new Date();
+    
+    // Carregar operações apenas
+    const promessaOperacoes = fetch('/api/operacoes')
+        .then(r => r.json())
+        .then(operacoes => {
+            const select = document.getElementById('entradaOperacao');
+            operacoes.forEach(op => {
+                const option = document.createElement('option');
+                option.value = op.nome;
+                option.textContent = op.nome;
+                select.appendChild(option);
+            });
+        })
+        .catch(err => console.error('Erro ao carregar operações:', err));
+    
+    const promessaFornecedores = fetch('/api/fornecedores?ativo=ativos')
+        .then(r => r.json())
+        .then(fornecedores => {
+            const select = document.getElementById('entradaFornecedor');
+            fornecedores.forEach(f => {
+                const option = document.createElement('option');
+                option.value = f.nome;
+                option.textContent = f.nome;
+                select.appendChild(option);
+            });
+        })
+        .catch(err => console.error('Erro ao carregar fornecedores:', err));
+    
+    const promessaProdutos = fetch('/api/produtos?ativo=ativos')
+        .then(r => r.json())
+        .then(produtos => {
+            window.produtosEntrada = produtos;
+            const select = document.getElementById('entradaDescricao');
+            produtos.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.codigo;
+                option.textContent = p.descricao;
+                select.appendChild(option);
+            });
+        })
+        .catch(err => console.error('Erro ao carregar produtos:', err));
+    
+    // DEPOIS que tudo carregar, preencher o produto selecionado
+    Promise.all([promessaOperacoes, promessaProdutos, promessaFornecedores]).then(() => {
+        // Definir operação padrão como "Entrada de Estoque"
+        const selectOperacao = document.getElementById('entradaOperacao');
+        for (let i = 0; i < selectOperacao.options.length; i++) {
+            if (selectOperacao.options[i].text === 'Entrada de Estoque') {
+                selectOperacao.selectedIndex = i;
+                break;
+            }
+        }
+        
+        // ===== ADICIONAR EVENT LISTENER PARA CARREGAR PREÇO =====
+        document.getElementById('entradaDescricao').addEventListener('change', function() {
+            const codigo = parseInt(this.value);
+            
+            if (!codigo) {
+                document.getElementById('entradaPreco').value = '0';
+                return;
+            }
+            
+            // Primeiro tenta buscar no array local
+            let produto = window.produtosEntrada.find(p => p.codigo === codigo);
+            
+            if (produto) {
+                // Se encontrou no array local, usa direto
+                document.getElementById('entradaPreco').value = produto.preco_compra || 0;
+                document.getElementById('entradaFornecedor').value = produto.fornecedor || '';
+                calcularTotalItemEntrada();
+            } else {
+                // Se não encontrou, busca na API
+                fetch(`/api/produtos/${codigo}`)
+                    .then(r => r.json())
+                    .then(produtoAPI => {
+                        document.getElementById('entradaPreco').value = produtoAPI.preco_compra || 0;
+                        document.getElementById('entradaFornecedor').value = produtoAPI.fornecedor || '';
+                        calcularTotalItemEntrada();
+                    })
+                    .catch(err => {
+                        console.error('Erro ao buscar produto:', err);
+                        document.getElementById('entradaPreco').value = '0';
+                    });
+            }
+        });
+        
+        document.getElementById('entradaQuantidade').addEventListener('input', calcularTotalItemEntrada);
+        document.getElementById('entradaPreco').addEventListener('input', calcularTotalItemEntrada);
+        // ===== FIM DO EVENT LISTENER =====
+        
+        if (codigoProduto) {
+            fetch(`/api/produtos/${codigoProduto}`)
+                .then(r => r.json())
+                .then(produto => {
+                    if (produto) {
+                        // Preencher descrição
+                        document.getElementById('entradaDescricao').value = produto.codigo;
+                        
+                        // Preencher preço
+                        document.getElementById('entradaPreco').value = produto.preco_compra || 0;
+                        
+                        // Preencher fornecedor como texto direto (não como select)
+                        const campoFornecedor = document.getElementById('entradaFornecedor');
+                        if (campoFornecedor.tagName === 'SELECT') {
+                            // Se for select, procura a opção
+                            for (let i = 0; i < campoFornecedor.options.length; i++) {
+                                if (campoFornecedor.options[i].text === produto.fornecedor) {
+                                    campoFornecedor.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                        } else {
+                            // Se for input, preenche direto
+                            campoFornecedor.value = produto.fornecedor || '';
+                        }
+                        
+                        // Calcular total
+                        calcularTotalItemEntrada();
+                        
+                        // Focar no campo quantidade
+                        setTimeout(() => document.getElementById('entradaQuantidade').focus(), 100);
+                    }
+                })
+                .catch(err => console.error('Erro ao buscar produto:', err));
+        } else {
+            console.log('Nenhum código de produto foi passado');
+        }
+    });
+}
+
+function calcularTotalItemEntrada() {
+    const preco = parseFloat(document.getElementById('entradaPreco').value) || 0;
+    const quantidade = parseInt(document.getElementById('entradaQuantidade').value) || 0;
+    document.getElementById('entradaTotal').value = (preco * quantidade).toFixed(2);
+}
+
+function inserirItemEntrada() {
+    const codigo = document.getElementById('entradaDescricao').value;
+    const descricao = document.getElementById('entradaDescricao').selectedOptions[0]?.text;
+    const preco = parseFloat(document.getElementById('entradaPreco').value) || 0;
+    const quantidade = parseInt(document.getElementById('entradaQuantidade').value) || 0;
+    const total = preco * quantidade;
+    
+    if (!codigo || descricao === 'Selecione...') {
+        alert('Selecione um produto!');
+        document.getElementById('entradaDescricao').focus();
+        return;
+    }
+    
+    if (quantidade <= 0) {
+        alert('Quantidade deve ser maior que zero!');
+        document.getElementById('entradaQuantidade').focus();
+        return;
+    }
+    
+    // Verificar se já existe
+    if (window.itensEntradaMultipla.find(item => item.codigo == codigo)) {
+        alert('Produto já adicionado!');
+        return;
+    }
+    
+    window.itensEntradaMultipla.push({
+        codigo: codigo,
+        descricao: descricao,
+        quantidade: quantidade,
+        preco: preco,
+        total: total
+    });
+    
+    atualizarTabelaEntrada();
+    limparCamposEntrada();
+}
+
+function atualizarTabelaEntrada() {
+    const tbody = document.getElementById('tabelaItensEntrada');
+    
+    if (window.itensEntradaMultipla.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 10px; color: #95a5a6;">
+                    Nenhum item adicionado
+                </td>
+            </tr>
+        `;
+    } else {
+        tbody.innerHTML = window.itensEntradaMultipla.map((item, index) => `
+            <tr style="border-bottom: 1px solid #dee2e6;">
+                <td style="padding: 3px 6px;">${item.codigo}</td>
+                <td style="padding: 3px 6px;">${item.descricao}</td>
+                <td style="padding: 3px 6px; text-align: right;">${item.quantidade}</td>
+                <td style="padding: 3px 6px; text-align: right;">R$ ${item.preco.toFixed(2)}</td>
+                <td style="padding: 3px 6px; text-align: right;">R$ ${item.total.toFixed(2)}</td>
+                <td style="padding: 3px 6px; text-align: center;">
+                    <button class="btn btn-sm btn-danger" onclick="excluirItemEntrada(${index})" style="padding: 2px 6px; font-size: 11px;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    // Atualizar total geral
+    const totalGeral = window.itensEntradaMultipla.reduce((sum, item) => sum + item.total, 0);
+    document.getElementById('totalGeralEntrada').textContent = totalGeral.toFixed(2).replace('.', ',');
+}
+
+function excluirItemEntrada(index) {
+    if (confirm('Deseja realmente excluir este item?')) {
+        window.itensEntradaMultipla.splice(index, 1);
+        atualizarTabelaEntrada();
+    }
+}
+
+function limparCamposEntrada() {
+    document.getElementById('entradaDescricao').value = '';
+    document.getElementById('entradaPreco').value = '0';
+    document.getElementById('entradaQuantidade').value = '1';
+    document.getElementById('entradaTotal').value = '0';
+    document.getElementById('entradaDescricao').focus();
+}
+
+function fecharModalEntrada() {
+    document.getElementById('modalEntradaMultipla').remove();
+}
+
+function finalizarEntradaMultipla() {
+    if (window.itensEntradaMultipla.length === 0) {
+        alert('Adicione pelo menos um item!');
+        return;
+    }
+    
+    const notaFiscal = document.getElementById('entradaNota').value.trim();
+    if (!notaFiscal) {
+        alert('Informe o número da nota fiscal!');
+        document.getElementById('entradaNota').focus();
+        return;
+    }
+    
+    const dados = {
+        data: document.getElementById('entradaData').value,
+        nota_fiscal: notaFiscal,
+        fornecedor: document.getElementById('entradaFornecedor').value,
+        operacao: document.getElementById('entradaOperacao').value,
+        observacao: document.getElementById('entradaObservacao').value,
+        itens: window.itensEntradaMultipla
+    };
+    
+    fetch('/api/entrada-multipla', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(dados)
+    })
+    .then(r => r.json())
+    .then(response => {
+        if (response.success) {
+            alert('Entrada registrada com sucesso!');
+            fecharModalEntrada();
+            carregarProdutos();
+            if (produtoSelecionado) {
+                setTimeout(() => selecionarProduto(produtoSelecionado), 800);
+            }
+        } else {
+            alert('Erro: ' + response.message);
+        }
+    })
+    .catch(error => {
+        alert('Erro ao registrar entrada: ' + error);
+    });
+}
+
+function abrirSaida(codigoProduto = null) {
+    console.log('abrirSaida chamado com código:', codigoProduto);
+    
+    // Criar modal de saída múltipla (COPIADO DA ENTRADA)
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;';
+    modal.innerHTML = `
+        <div style="background: white; padding: 10px; border-radius: 10px; width: 70%; max-width: 850px; height: 85vh; display: flex; flex-direction: column;">
+            <h3 style="margin: 0 0 6px 0; color: #e74c3c; text-align: center; font-size: 16px;">
+                <i class="fas fa-arrow-up"></i> SAÍDA DE ESTOQUE
+            </h3>
+            
+            <!-- Campos do cabeçalho -->
+            <!-- Linha 1: Data, Nota Fiscal, Operação, ID -->
+            <div style="display: flex; gap: 6px; margin-bottom: 6px; flex-shrink: 0;">
+                <div style="flex: 0 0 110px;">
+                    <label style="display: block; margin-bottom: 2px; font-weight: bold; font-size: 11px;">Data</label>
+                    <input type="date" id="saidaData" class="form-control" readonly style="background-color: #f0f0f0; padding: 3px 6px; font-size: 11px; height: 26px; border: 2px solid #bdc3c7;" tabindex="-1">
+                </div>
+                <div style="flex: 0 0 130px;">
+                    <label style="display: block; margin-bottom: 2px; font-weight: bold; font-size: 11px;">Nº Nota Fiscal</label>
+                    <input id="saidaNota" class="form-control" style="padding: 3px 6px; font-size: 11px; height: 26px; border: 2px solid #bdc3c7;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 2px; font-weight: bold; font-size: 11px;">Operação</label>
+                    <select id="saidaOperacao" class="form-control" style="padding: 3px 6px; font-size: 11px; height: 26px; border: 2px solid #bdc3c7;">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+                <div style="flex: 0 0 70px;">
+                    <label style="display: block; margin-bottom: 2px; font-weight: bold; font-size: 11px;">ID</label>
+                    <input id="saidaIdPessoa" class="form-control" style="padding: 3px 6px; font-size: 11px; height: 26px; background-color: #f0f0f0;" readonly tabindex="-1">
+                </div>
+            </div>
+            
+            <!-- Linha 2: Tipo (radio buttons) e Pessoa -->
+            <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: flex-end; flex-shrink: 0;">
+                <div style="flex: 0 0 280px; padding: 4px; background-color: #f8f9fa; border-radius: 5px;">
+                    <label style="font-weight: bold; font-size: 11px; margin-bottom: 2px; display: block;">Tipo:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <label style="font-size: 11px; cursor: pointer;">
+                            <input type="radio" name="tipoSaida" value="funcionario" checked onchange="mudarTipoSaida()"> Funcionário
+                        </label>
+                        <label style="font-size: 11px; cursor: pointer;">
+                            <input type="radio" name="tipoSaida" value="cliente" onchange="mudarTipoSaida()"> Cliente
+                        </label>
+                        <label style="font-size: 11px; cursor: pointer;">
+                            <input type="radio" name="tipoSaida" value="fornecedor" onchange="mudarTipoSaida()"> Fornecedor
+                        </label>
+                    </div>
+                </div>
+                <div style="flex: 1;">
+                    <label id="labelSaidaPessoa" style="display: block; margin-bottom: 2px; font-weight: bold; font-size: 11px;">Funcionário</label>
+                    <select id="saidaPessoa" class="form-control" style="padding: 3px 6px; font-size: 11px; height: 26px; border: 2px solid #bdc3c7;">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Campos de item -->
+            <div style="display: flex; gap: 6px; margin-bottom: 6px; padding: 6px; background-color: #f8f9fa; border-radius: 5px; flex-shrink: 0;">
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 2px; font-weight: bold; font-size: 11px;">Descrição do Item *</label>
+                    <select id="saidaDescricao" class="form-control" autofocus style="padding: 3px 6px; font-size: 11px; height: 26px; border: 2px solid #bdc3c7;">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+                <div style="flex: 0 0 90px;">
+                    <label style="display: block; margin-bottom: 2px; font-weight: bold; font-size: 11px;">Preço</label>
+                    <input type="number" id="saidaPreco" class="form-control" step="0.01" value="0" readonly style="background-color: #f0f0f0; padding: 3px 6px; font-size: 11px; height: 26px; border: 2px solid #bdc3c7;">
+                </div>
+                <div style="flex: 0 0 70px;">
+                    <label style="display: block; margin-bottom: 2px; font-weight: bold; font-size: 11px;">Qtd *</label>
+                    <input id="saidaQuantidade" class="form-control" value="1" style="padding: 3px 6px; font-size: 11px; height: 26px; border: 2px solid #bdc3c7;">
+                </div>
+                <div style="flex: 0 0 90px;">
+                    <label style="display: block; margin-bottom: 2px; font-weight: bold; font-size: 11px;">Total</label>
+                    <input type="number" id="saidaTotal" class="form-control" readonly style="background-color: #f0f0f0; padding: 3px 6px; font-size: 11px; height: 26px;">
+                </div>
+                <div style="flex: 0 0 65px; display: flex; align-items: flex-end;">
+                    <button type="button" class="btn btn-warning" onclick="inserirItemSaida()" style="width: 100%; padding: 3px 6px; font-size: 11px; height: 26px;">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tabela de itens (com scroll) -->
+            <div style="flex: 1; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; margin-bottom: 2px; min-height: 0;">
+                <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                    <thead style="background-color: #34495e; color: white; position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th style="padding: 3px 6px; text-align: left; font-size: 13px; width: 70px;">Código</th>
+                            <th style="padding: 3px 6px; text-align: left; font-size: 13px; width: auto;">Descrição</th>
+                            <th style="padding: 3px 6px; text-align: right; font-size: 13px; width: 70px;">Qtd</th>
+                            <th style="padding: 3px 6px; text-align: right; font-size: 13px; width: 110px;">Preço</th>
+                            <th style="padding: 3px 6px; text-align: right; font-size: 13px; width: 110px;">Total</th>
+                            <th style="padding: 3px 6px; text-align: center; width: 70px; font-size: 13px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaItensSaida" style="font-size: 13px;">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 20px; color: #95a5a6;">
+                                Nenhum item adicionado
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Observação e Total -->
+            <div style="display: flex; gap: 6px; margin-bottom: 2px; flex-shrink: 0; align-items: flex-end;">
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 10px;">Observação</label>
+                    <input type="text" id="saidaObservacao" class="form-control" style="padding: 2px 4px; font-size: 10px; border: 1px solid #bdc3c7; height: 32px;">
+                </div>
+                <div style="flex: 0 0 140px;">
+                    <label style="display: block; margin-bottom: 1px; font-weight: bold; font-size: 10px; text-align: center;">Total da Saída</label>
+                    <div style="background-color: #e74c3c; color: white; padding: 6px; border-radius: 5px; text-align: center; height: 32px; display: flex; align-items: center; justify-content: center;">
+                        <div style="font-size: 16px; font-weight: bold;">R$ <span id="totalGeralSaida">0,00</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botões -->
+            <div style="display: flex; gap: 4px; justify-content: flex-end; flex-shrink: 0;">
+                <button type="button" class="btn btn-secondary" onclick="limparCamposSaida()" style="padding: 4px 8px; font-size: 10px;">
+                    <i class="fas fa-broom"></i> Limpar
+                </button>
+                <button type="button" class="btn btn-danger" onclick="fecharModalSaida()" style="padding: 4px 8px; font-size: 10px;">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="finalizarSaidaMultipla()" style="padding: 4px 8px; font-size: 10px;">
+                    <i class="fas fa-check"></i> Finalizar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.id = 'modalSaidaMultipla';
+    
+    // Adicionar evento ESC para fechar
+    document.addEventListener('keydown', function fecharComESC(e) {
+        if (e.key === 'Escape') {
+            fecharModalSaida();
+            document.removeEventListener('keydown', fecharComESC);
+        }
+    });
+    
+    // Inicializar
+    window.itensSaidaMultipla = [];
+    document.getElementById('saidaData').valueAsDate = new Date();
+    
+    // Carregar funcionários (padrão)
+    carregarPessoasSaida('funcionario');
+    
+    // Carregar operações e produtos em paralelo
+    const promessaOperacoes = fetch('/api/operacoes')
+        .then(r => r.json())
+        .then(operacoes => {
+            const select = document.getElementById('saidaOperacao');
+            operacoes.forEach(o => {
+                select.innerHTML += `<option value="${o.nome}">${o.nome}</option>`;
+            });
+        })
+        .catch(err => console.error('Erro ao carregar operações:', err));
+    
+    const promessaProdutos = fetch('/api/produtos?ativo=ativos')
+        .then(r => r.json())
+        .then(produtos => {
+            const select = document.getElementById('saidaDescricao');
+            window.produtosSaida = produtos;
+            produtos.forEach(p => {
+                select.innerHTML += `<option value="${p.codigo}">${p.descricao}</option>`;
+            });
+        })
+        .catch(err => console.error('Erro ao carregar produtos:', err));
+    
+    // DEPOIS que operações carregarem, preencher o produto selecionado
+    Promise.all([promessaOperacoes, promessaProdutos]).then(() => {
+        // Definir operação padrão como "Saída de Estoque"
+        const selectOperacao = document.getElementById('saidaOperacao');
+        for (let i = 0; i < selectOperacao.options.length; i++) {
+            if (selectOperacao.options[i].text === 'Saída de Estoque') {
+                selectOperacao.selectedIndex = i;
+                break;
+            }
+        }
+        
+        if (codigoProduto) {
+            console.log('Buscando produto com código:', codigoProduto);
+            fetch(`/api/produtos?busca=&ativo=todos`)
+                .then(r => r.json())
+                .then(produtos => {
+                    console.log('Produtos recebidos:', produtos.length);
+                    const produto = produtos.find(p => p.codigo == codigoProduto);
+                    console.log('Produto encontrado:', produto);
+                    if (produto) {
+                        // 1. Preencher Descrição do Item
+                        document.getElementById('saidaDescricao').value = produto.codigo;
+                        
+                        // 2. Preencher Preço
+                        if (produto.preco_venda) {
+                            document.getElementById('saidaPreco').value = produto.preco_venda;
+                        }
+                        
+                        // 3. Calcular total
+                        calcularTotalItemSaida();
+                        
+                        console.log('Produto preenchido:', produto.descricao);
+                        // Focar no campo quantidade
+                        setTimeout(() => document.getElementById('saidaQuantidade').focus(), 100);
+                    } else {
+                        console.log('Produto NÃO encontrado com código:', codigoProduto);
+                    }
+                })
+                .catch(err => console.error('Erro ao buscar produto:', err));
+        } else {
+            console.log('Nenhum código de produto foi passado');
+        }
+    });
+    
+    // Eventos
+    document.getElementById('saidaDescricao').addEventListener('change', function() {
+        const codigo = this.value;
+        const produto = window.produtosSaida.find(p => p.codigo == codigo);
+        if (produto) {
+            document.getElementById('saidaPreco').value = produto.preco_venda || 0;
+            calcularTotalItemSaida();
+        }
+    });
+    
+    document.getElementById('saidaPessoa').addEventListener('change', function() {
+        document.getElementById('saidaIdPessoa').value = this.value;
+    });
+    
+    document.getElementById('saidaQuantidade').addEventListener('input', calcularTotalItemSaida);
+    document.getElementById('saidaPreco').addEventListener('input', calcularTotalItemSaida);
+}
+
+function mudarTipoSaida() {
+    const tipo = document.querySelector('input[name="tipoSaida"]:checked').value;
+    carregarPessoasSaida(tipo);
+}
+
+function carregarPessoasSaida(tipo) {
+    const select = document.getElementById('saidaPessoa');
+    const label = document.getElementById('labelSaidaPessoa');
+    
+    select.innerHTML = '<option value="">Selecione...</option>';
+    document.getElementById('saidaIdPessoa').value = '';
+    
+    let endpoint = '';
+    let labelText = '';
+    
+    if (tipo === 'funcionario') {
+        endpoint = '/api/funcionarios?ativo=ativos';
+        labelText = 'Funcionário';
+    } else if (tipo === 'cliente') {
+        endpoint = '/api/clientes?ativo=ativos';
+        labelText = 'Cliente';
+    } else if (tipo === 'fornecedor') {
+        endpoint = '/api/fornecedores?ativo=ativos';
+        labelText = 'Fornecedor';
+    }
+    
+    label.textContent = labelText;
+    
+    fetch(endpoint)
+        .then(r => r.json())
+        .then(pessoas => {
+            pessoas.forEach(p => {
+                const id = p.id || p.codigo;
+                select.innerHTML += `<option value="${id}">${p.nome}</option>`;
+            });
+        });
+}
+
+function calcularTotalItemSaida() {
+    const preco = parseFloat(document.getElementById('saidaPreco').value) || 0;
+    const quantidade = parseInt(document.getElementById('saidaQuantidade').value) || 0;
+    document.getElementById('saidaTotal').value = (preco * quantidade).toFixed(2);
+}
+
+function inserirItemSaida() {
+    const codigo = document.getElementById('saidaDescricao').value;
+    const descricao = document.getElementById('saidaDescricao').selectedOptions[0]?.text;
+    const preco = parseFloat(document.getElementById('saidaPreco').value) || 0;
+    const quantidade = parseInt(document.getElementById('saidaQuantidade').value) || 0;
+    const total = preco * quantidade;
+    
+    if (!codigo || descricao === 'Selecione...') {
+        alert('Selecione um produto!');
+        document.getElementById('saidaDescricao').focus();
+        return;
+    }
+    
+    if (quantidade <= 0) {
+        alert('Quantidade deve ser maior que zero!');
+        document.getElementById('saidaQuantidade').focus();
+        return;
+    }
+    
+    // Verificar estoque
+    const produto = window.produtosSaida.find(p => p.codigo == codigo);
+    if (produto) {
+        const estoqueAtual = produto.estoque_atual;
+        const emprestados = produto.emprestados || 0;
+        const estoqueDisponivel = estoqueAtual - emprestados;
+        
+        if (quantidade > estoqueDisponivel) {
+            alert(`❌ ESTOQUE INSUFICIENTE!\n\n` +
+                  `Estoque Total: ${estoqueAtual}\n` +
+                  `Já Emprestado: ${emprestados}\n` +
+                  `Disponível: ${estoqueDisponivel}\n` +
+                  `Solicitado: ${quantidade}\n\n` +
+                  `Você só pode dar saída de ${estoqueDisponivel} unidade(s)!`);
+            return;
+        }
+    }
+    
+    // Verificar se já existe
+    if (window.itensSaidaMultipla.find(item => item.codigo == codigo)) {
+        alert('Produto já adicionado!');
+        return;
+    }
+    
+    window.itensSaidaMultipla.push({
+        codigo: codigo,
+        descricao: descricao,
+        quantidade: quantidade,
+        preco: preco,
+        total: total
+    });
+    
+    atualizarTabelaSaida();
+    limparCamposSaida();
+}
+
+function atualizarTabelaSaida() {
+    const tbody = document.getElementById('tabelaItensSaida');
+    
+    if (window.itensSaidaMultipla.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 10px; color: #95a5a6;">
+                    Nenhum item adicionado
+                </td>
+            </tr>
+        `;
+    } else {
+        tbody.innerHTML = window.itensSaidaMultipla.map((item, index) => `
+            <tr style="border-bottom: 1px solid #dee2e6;">
+                <td style="padding: 3px 6px;">${item.codigo}</td>
+                <td style="padding: 3px 6px;">${item.descricao}</td>
+                <td style="padding: 3px 6px; text-align: right;">${item.quantidade}</td>
+                <td style="padding: 3px 6px; text-align: right;">R$ ${item.preco.toFixed(2)}</td>
+                <td style="padding: 3px 6px; text-align: right;">R$ ${item.total.toFixed(2)}</td>
+                <td style="padding: 3px 6px; text-align: center;">
+                    <button class="btn btn-sm btn-danger" onclick="excluirItemSaida(${index})" style="padding: 2px 6px; font-size: 11px;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    // Atualizar total geral
+    const totalGeral = window.itensSaidaMultipla.reduce((sum, item) => sum + item.total, 0);
+    document.getElementById('totalGeralSaida').textContent = totalGeral.toFixed(2).replace('.', ',');
+}
+
+function excluirItemSaida(index) {
+    if (confirm('Deseja realmente excluir este item?')) {
+        window.itensSaidaMultipla.splice(index, 1);
+        atualizarTabelaSaida();
+    }
+}
+
+function limparCamposSaida() {
+    document.getElementById('saidaDescricao').value = '';
+    document.getElementById('saidaPreco').value = '0';
+    document.getElementById('saidaQuantidade').value = '1';
+    document.getElementById('saidaTotal').value = '0';
+    document.getElementById('saidaDescricao').focus();
+}
+
+function fecharModalSaida() {
+    document.getElementById('modalSaidaMultipla').remove();
+}
+
+function finalizarSaidaMultipla() {
+    if (window.itensSaidaMultipla.length === 0) {
+        alert('Adicione pelo menos um item!');
+        return;
+    }
+    
+    // VALIDAÇÃO OBRIGATÓRIA: Operação
+    const operacao = document.getElementById('saidaOperacao').value.trim();
+    if (!operacao) {
+        alert('❌ CAMPO OBRIGATÓRIO!\n\nInforme a Operação antes de finalizar a saída.');
+        document.getElementById('saidaOperacao').focus();
+        return;
+    }
+    
+    // VALIDAÇÃO OBRIGATÓRIA: Funcionário/Cliente/Fornecedor
+    const pessoaSelect = document.getElementById('saidaPessoa');
+    const solicitanteNome = pessoaSelect.options[pessoaSelect.selectedIndex]?.text || '';
+    const solicitanteId = pessoaSelect.value;
+    
+    if (!solicitanteId || solicitanteNome === 'Selecione...') {
+        const tipoSelecionado = document.querySelector('input[name="tipoSaida"]:checked').value;
+        let tipoTexto = 'Funcionário';
+        if (tipoSelecionado === 'cliente') tipoTexto = 'Cliente';
+        if (tipoSelecionado === 'fornecedor') tipoTexto = 'Fornecedor';
+        
+        alert(`❌ CAMPO OBRIGATÓRIO!\n\nSelecione o ${tipoTexto} antes de finalizar a saída.`);
+        pessoaSelect.focus();
+        return;
+    }
+    
+    const notaFiscal = document.getElementById('saidaNota').value.trim();
+    const tipoSelecionado = document.querySelector('input[name="tipoSaida"]:checked').value;
+    
+    // Mapear tipo para formato correto
+    let solicitanteTipo = '';
+    if (tipoSelecionado === 'funcionario') {
+        solicitanteTipo = 'FUNCIONARIO';
+    } else if (tipoSelecionado === 'cliente') {
+        solicitanteTipo = 'CLIENTE';
+    } else if (tipoSelecionado === 'fornecedor') {
+        solicitanteTipo = 'FORNECEDOR';
+    }
+    
+    // Processar saídas item por item
+    Promise.all(window.itensSaidaMultipla.map(item => {
+        return fetch('/api/movimentacoes/saida', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                produto_codigo: item.codigo,
+                quantidade: item.quantidade,
+                valor_unitario: item.preco,
+                valor_total: item.total,
+                nota_fiscal: notaFiscal,
+                operacao: operacao,
+                observacao: document.getElementById('saidaObservacao').value,
+                solicitante_tipo: solicitanteTipo,
+                solicitante_nome: solicitanteNome
+            })
+        }).then(r => r.json());
+    }))
+    .then(responses => {
+        const erros = responses.filter(r => !r.success);
+        if (erros.length > 0) {
+            alert('Erro: ' + erros.map(e => e.message).join(', '));
+        } else {
+            alert('Saída registrada com sucesso!');
+            fecharModalSaida();
+            carregarProdutos();
+            if (produtoSelecionado) {
+                setTimeout(() => selecionarProduto(produtoSelecionado), 800);
+            }
+        }
+    })
+    .catch(error => {
+        alert('Erro ao registrar saída: ' + error);
+    });
+}
+
+function abrirEmprestimo() {
+    window.location.href = '/emprestimos';
+}
+
+function atualizarPreviewFoto(url) {
+    const img = document.getElementById('fotoPreview');
+    const imagemPadrao = '/api/foto/imagem-padrao.jpg';
+    
+    console.log('=== ATUALIZAR FOTO ===');
+    console.log('URL recebida:', url);
+    console.log('Tipo:', typeof url);
+    
+    let fotoUrl = imagemPadrao; // Padrão
+    
+    if (url && url.trim() !== '' && url !== 'null' && url !== 'None') {
+        // Se for apenas o nome do arquivo, usar a rota /api/foto/
+        if (!url.startsWith('http') && !url.startsWith('/')) {
+            fotoUrl = '/api/foto/' + url;
+        } else {
+            fotoUrl = url;
+        }
+    }
+    
+    // Adicionar timestamp para evitar cache
+    const fotoUrlComTimestamp = fotoUrl + '?t=' + new Date().getTime();
+    
+    console.log('URL final:', fotoUrlComTimestamp);
+    
+    // Configurar handler de erro ANTES de definir src
+    img.onerror = function() {
+        console.log('ERRO ao carregar foto, usando imagem padrão');
+        // Se der erro, usa a imagem padrão (sem timestamp para não entrar em loop)
+        if (img.src !== window.location.origin + imagemPadrao) {
+            img.src = imagemPadrao;
+        }
+    };
+    
+    img.onload = function() {
+        console.log('Foto carregada com sucesso!');
+    };
+    
+    // Atualizar imagem
+    img.src = fotoUrlComTimestamp;
+    
+    console.log('Imagem atualizada!');
+}
+
+function abrirCategoria() {
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;';
+    modal.innerHTML = `
+        <div style="background: white; padding: 15px; border-radius: 8px; width: 98%; max-width: 1600px; height: 95vh; display: flex; flex-direction: column;">
+            <h3 style="margin: 0 0 15px 0; color: #9b59b6; text-align: center; font-size: 18px;">
+                <i class="fas fa-tags"></i> Categoria Para Cotação
+            </h3>
+            
+            <!-- Filtros -->
+            <div style="background: #f8f9fa; padding: 12px; border-radius: 5px; margin-bottom: 15px;">
+                <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">Filtrar</div>
+                <div style="display: flex; gap: 15px; align-items: flex-end;">
+                    <div style="flex: 0 0 200px;">
+                        <label style="display: block; margin-bottom: 3px; font-size: 12px; font-weight: 600;">Categoria</label>
+                        <select id="filtroCategoria" class="form-control" style="padding: 5px; font-size: 12px; height: 32px; border: 2px solid #bdc3c7;">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div style="flex: 0 0 200px;">
+                        <label style="display: block; margin-bottom: 3px; font-size: 12px; font-weight: 600;">Status</label>
+                        <select id="filtroStatus" class="form-control" style="padding: 5px; font-size: 12px; height: 32px; border: 2px solid #bdc3c7;">
+                            <option value="">Todos</option>
+                            <option value="normal">Normal</option>
+                            <option value="baixo">Estoque Baixo</option>
+                            <option value="excedido">Excedido</option>
+                        </select>
+                    </div>
+                    <div style="flex: 0 0 350px;">
+                        <label style="display: block; margin-bottom: 3px; font-size: 12px; font-weight: 600;">Opções</label>
+                        <input type="text" id="filtroPesquisa" class="form-control" placeholder="Digite para pesquisar..." style="padding: 5px 10px; font-size: 12px; height: 32px; border: 2px solid #bdc3c7;">
+                    </div>
+                    <div style="flex: 0 0 auto; display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="mostrarTodosProdutos" onchange="carregarDadosCategoria()" style="cursor: pointer;">
+                        <label for="mostrarTodosProdutos" style="font-size: 12px; font-weight: 600; cursor: pointer; margin: 0;">Mostrar Todos</label>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button class="btn btn-warning" onclick="limparFiltrosCategoria()" style="padding: 6px 16px; font-size: 12px; background-color: #f39c12;">
+                        <i class="fas fa-broom"></i> Limpar
+                    </button>
+                    <button onclick="exportarCategoriaExcel()" style="background-color: #27ae60; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                        <i class="fas fa-file-excel"></i> Excel
+                    </button>
+                    <button onclick="exportarCategoriaPDF()" style="background-color: #e74c3c; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tabela -->
+            <div style="flex: 1; overflow-x: auto; border: 1px solid #dee2e6; border-radius: 5px; margin-bottom: 10px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead style="background-color: #34495e; color: white; position: sticky; top: 0;">
+                        <tr>
+                            <th style="padding: 10px; text-align: left; border-right: 1px solid #4a5568;">Data Atual</th>
+                            <th style="padding: 10px; text-align: left; border-right: 1px solid #4a5568;">Descrição do Item</th>
+                            <th style="padding: 10px; text-align: left; border-right: 1px solid #4a5568;">Marca</th>
+                            <th style="padding: 10px; text-align: center; border-right: 1px solid #4a5568;">Qtd Entrada</th>
+                            <th style="padding: 10px; text-align: center; border-right: 1px solid #4a5568;">Saldo do Estoque</th>
+                            <th style="padding: 10px; text-align: center; border-right: 1px solid #4a5568;">Estoque Mínimo</th>
+                            <th style="padding: 10px; text-align: center; border-right: 1px solid #4a5568;">Estoque Máximo</th>
+                            <th style="padding: 10px; text-align: center;">Empréstimo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaCategoria">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px; color: #95a5a6;">
+                                Carregando dados...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.id = 'modalCategoria';
+    
+    // Carregar categorias no filtro
+    fetch('/api/categorias')
+        .then(r => r.json())
+        .then(categorias => {
+            const select = document.getElementById('filtroCategoria');
+            categorias.forEach(c => {
+                select.innerHTML += `<option value="${c.nome}">${c.nome}</option>`;
+            });
+        });
+    
+    // Carregar dados iniciais
+    carregarDadosCategoria();
+    
+    // Adicionar eventos para filtragem dinâmica
+    document.getElementById('filtroCategoria').addEventListener('change', carregarDadosCategoria);
+    document.getElementById('filtroStatus').addEventListener('change', carregarDadosCategoria);
+    document.getElementById('filtroPesquisa').addEventListener('input', carregarDadosCategoria);
+    
+    // Evento ESC para fechar
+    document.addEventListener('keydown', function fecharComESC(e) {
+        if (e.key === 'Escape') {
+            fecharModalCategoria();
+            document.removeEventListener('keydown', fecharComESC);
+        }
+    });
+}
+
+function carregarDadosCategoria() {
+    const categoria = document.getElementById('filtroCategoria').value;
+    const status = document.getElementById('filtroStatus').value;
+    const pesquisa = document.getElementById('filtroPesquisa').value.toLowerCase();
+    const mostrarTodos = document.getElementById('mostrarTodosProdutos') ? document.getElementById('mostrarTodosProdutos').checked : false;
+    
+    fetch('/api/produtos?ativo=ativos')
+        .then(r => r.json())
+        .then(async produtos => {
+            // FILTRO PADRÃO: Mostrar apenas produtos com entrada (estoque_atual > 0), a menos que "Mostrar Todos" esteja marcado
+            let produtosFiltrados = mostrarTodos ? produtos : produtos.filter(p => p.estoque_atual > 0);
+            
+            if (categoria) {
+                produtosFiltrados = produtosFiltrados.filter(p => p.categoria === categoria);
+            }
+            
+            if (status === 'baixo') {
+                produtosFiltrados = produtosFiltrados.filter(p => p.estoque_atual < p.estoque_minimo);
+            } else if (status === 'excedido') {
+                produtosFiltrados = produtosFiltrados.filter(p => p.estoque_atual > p.estoque_maximo);
+            } else if (status === 'normal') {
+                produtosFiltrados = produtosFiltrados.filter(p => p.estoque_atual >= p.estoque_minimo && p.estoque_atual <= p.estoque_maximo);
+            }
+            
+            if (pesquisa) {
+                produtosFiltrados = produtosFiltrados.filter(p => 
+                    (p.descricao || '').toLowerCase().includes(pesquisa) ||
+                    (p.marca || '').toLowerCase().includes(pesquisa) ||
+                    (p.observacao || '').toLowerCase().includes(pesquisa)
+                );
+            }
+            
+            // Buscar TODOS os empréstimos ativos UMA VEZ
+            const responseEmprestimos = await fetch(`/api/emprestimos?status=EMPRESTADO`);
+            const todosEmprestimos = await responseEmprestimos.json();
+            
+            // Buscar movimentações e calcular empréstimos para cada produto
+            const produtosComMovimentacoes = await Promise.all(
+                produtosFiltrados.map(async p => {
+                    try {
+                        // Buscar movimentações
+                        const responseMovimentacoes = await fetch(`/api/movimentacoes/${p.codigo}`);
+                        const movimentacoes = await responseMovimentacoes.json();
+                        
+                        let totalEntradas = 0;
+                        let totalSaidas = 0;
+                        
+                        movimentacoes.forEach(m => {
+                            if (m.tipo === 'ENTRADA') {
+                                totalEntradas += m.quantidade || 0;
+                            } else if (m.tipo === 'SAIDA') {
+                                totalSaidas += m.quantidade || 0;
+                            }
+                        });
+                        
+                        // Filtrar empréstimos deste produto e SOMAR as quantidades
+                        const totalEmprestimos = todosEmprestimos
+                            .filter(emp => Number(emp.cod_produto) === Number(p.codigo))
+                            .reduce((total, emp) => total + (emp.quantidade || 0), 0);
+                        
+                        return {
+                            ...p,
+                            totalEntradas: totalEntradas,
+                            totalSaidas: totalSaidas,
+                            totalEmprestimos: totalEmprestimos
+                        };
+                    } catch (error) {
+                        return {
+                            ...p,
+                            totalEntradas: 0,
+                            totalSaidas: 0,
+                            totalEmprestimos: 0
+                        };
+                    }
+                })
+            );
+            
+            // Preencher tabela
+            const tbody = document.getElementById('tabelaCategoria');
+            
+            if (produtosComMovimentacoes.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 40px; color: #95a5a6;">
+                            Nenhum produto encontrado
+                        </td>
+                    </tr>
+                `;
+            } else {
+                const dataAtual = new Date().toLocaleDateString('pt-BR');
+                tbody.innerHTML = produtosComMovimentacoes.map(p => {
+                    // Estilo condicional para coluna Empréstimo
+                    const emprestimoStyle = (p.totalEmprestimos > 0) 
+                        ? 'padding: 10px; text-align: center; font-weight: bold; color: #3498db;' 
+                        : 'padding: 10px; text-align: center;';
+                    
+                    return `
+                        <tr style="border-bottom: 1px solid #e9ecef;">
+                            <td style="padding: 10px; border-right: 1px solid #e9ecef;">${dataAtual}</td>
+                            <td style="padding: 10px; border-right: 1px solid #e9ecef;">${p.descricao || ''}</td>
+                            <td style="padding: 10px; border-right: 1px solid #e9ecef;">${p.marca || ''}</td>
+                            <td style="padding: 10px; text-align: center; border-right: 1px solid #e9ecef;">${p.totalEntradas || 0}</td>
+                            <td style="padding: 10px; text-align: center; border-right: 1px solid #e9ecef;">${p.estoque_atual || 0}</td>
+                            <td style="padding: 10px; text-align: center; border-right: 1px solid #e9ecef;">${p.estoque_minimo || 0}</td>
+                            <td style="padding: 10px; text-align: center; border-right: 1px solid #e9ecef;">${p.estoque_maximo || 0}</td>
+                            <td style="${emprestimoStyle}">${p.totalEmprestimos || 0}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        });
+}
+
+function aplicarFiltrosCategoria() {
+    carregarDadosCategoria();
+}
+
+function limparFiltrosCategoria() {
+    document.getElementById('filtroCategoria').value = '';
+    document.getElementById('filtroStatus').value = '';
+    document.getElementById('filtroPesquisa').value = '';
+    carregarDadosCategoria();
+}
+
+function abrirModalExportarExcel() {
+    const modalExport = document.createElement('div');
+    modalExport.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(3px);';
+    modalExport.innerHTML = `
+        <div style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); padding: 0; border-radius: 12px; width: 500px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); overflow: hidden;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); padding: 20px; text-align: center; position: relative;">
+                <i class="fas fa-file-excel" style="font-size: 40px; color: white; margin-bottom: 10px;"></i>
+                <h3 style="margin: 0; color: white; font-size: 22px; font-weight: 600;">Exportar para Excel</h3>
+                <p style="margin: 5px 0 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">Escolha o formato desejado para exportação</p>
+            </div>
+            
+            <!-- Body -->
+            <div style="padding: 30px;">
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 600; font-size: 14px; color: #2c3e50;">
+                        <i class="fas fa-file-alt" style="margin-right: 8px; color: #27ae60;"></i>Formato do Arquivo
+                    </label>
+                    <select id="formatoExcel" class="form-control" style="padding: 12px 15px; font-size: 14px; border: 2px solid #e0e0e0; border-radius: 8px; background: white; transition: all 0.3s; cursor: pointer;">
+                        <option value="xlsx">📊 .xlsx - Excel 2007+ (Recomendado)</option>
+                        <option value="xlsm">🔧 .xlsm - Excel com Macros</option>
+                        <option value="xlsb">⚡ .xlsb - Excel Binário (Rápido)</option>
+                        <option value="xls">📁 .xls - Excel 97-2003 (Compatível)</option>
+                        <option value="xltx">📋 .xltx - Modelo Excel</option>
+                        <option value="xltm">🔨 .xltm - Modelo com Macros</option>
+                    </select>
+                </div>
+                
+                <!-- Info Box -->
+                <div style="background: #e8f5e9; border-left: 4px solid #27ae60; padding: 12px 15px; border-radius: 6px; margin-bottom: 25px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-info-circle" style="color: #27ae60; font-size: 18px;"></i>
+                        <div style="font-size: 12px; color: #2c3e50; line-height: 1.5;">
+                            <strong>Filtros aplicados:</strong><br>
+                            Os dados exportados respeitarão os filtros ativos (Categoria, Status e Pesquisa).
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Buttons -->
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button onclick="fecharModalExportar()" style="padding: 12px 24px; font-size: 14px; font-weight: 600; border: 2px solid #95a5a6; background: white; color: #7f8c8d; border-radius: 8px; cursor: pointer; transition: all 0.3s;">
+                        <i class="fas fa-times" style="margin-right: 6px;"></i>Cancelar
+                    </button>
+                    <button onclick="exportarParaExcel()" style="padding: 12px 28px; font-size: 14px; font-weight: 600; border: none; background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; border-radius: 8px; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);">
+                        <i class="fas fa-download" style="margin-right: 8px;"></i>Exportar Agora
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modalExport);
+    modalExport.id = 'modalExportarExcel';
+    
+    // Animação de entrada
+    const modalContent = modalExport.querySelector('div > div');
+    modalContent.style.transform = 'scale(0.9)';
+    modalContent.style.opacity = '0';
+    setTimeout(() => {
+        modalContent.style.transition = 'all 0.3s ease';
+        modalContent.style.transform = 'scale(1)';
+        modalContent.style.opacity = '1';
+    }, 10);
+    
+    // Hover effects
+    const selectElement = document.getElementById('formatoExcel');
+    selectElement.addEventListener('focus', function() {
+        this.style.borderColor = '#27ae60';
+        this.style.boxShadow = '0 0 0 3px rgba(39, 174, 96, 0.1)';
+    });
+    selectElement.addEventListener('blur', function() {
+        this.style.borderColor = '#e0e0e0';
+        this.style.boxShadow = 'none';
+    });
+    
+    // Fechar com ESC
+    document.addEventListener('keydown', function fecharComESC(e) {
+        if (e.key === 'Escape') {
+            fecharModalExportar();
+            document.removeEventListener('keydown', fecharComESC);
+        }
+    });
+}
+
+function fecharModalExportar() {
+    const modal = document.getElementById('modalExportarExcel');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function exportarParaExcel() {
+    const formato = document.getElementById('formatoExcel').value;
+    const categoria = document.getElementById('filtroCategoria').value;
+    const status = document.getElementById('filtroStatus').value;
+    const pesquisa = document.getElementById('filtroPesquisa').value;
+    
+    // Construir URL com parâmetros
+    const params = new URLSearchParams({
+        formato: formato,
+        categoria: categoria || '',
+        status: status || '',
+        pesquisa: pesquisa || ''
+    });
+    
+    // Fazer download
+    window.location.href = `/api/exportar-categoria-excel?${params.toString()}`;
+    
+    // Fechar modal
+    fecharModalExportar();
+}
+
+function exportarCategoriaExcel() {
+    // Construir URL com os mesmos filtros aplicados
+    const params = new URLSearchParams();
+    
+    const categoria = document.getElementById('filtroCategoria').value;
+    const status = document.getElementById('filtroStatus').value;
+    const pesquisa = document.getElementById('filtroPesquisa').value;
+    
+    if (categoria) {
+        params.append('categoria', categoria);
+    }
+    if (status) {
+        params.append('status', status);
+    }
+    if (pesquisa) {
+        params.append('pesquisa', pesquisa);
+    }
+    
+    window.location.href = '/api/exportar-categoria-excel?' + params.toString();
+}
+
+function exportarCategoriaPDF() {
+    // Construir URL com os mesmos filtros aplicados
+    const params = new URLSearchParams();
+    
+    const categoria = document.getElementById('filtroCategoria').value;
+    const status = document.getElementById('filtroStatus').value;
+    const pesquisa = document.getElementById('filtroPesquisa').value;
+    
+    if (categoria) {
+        params.append('categoria', categoria);
+    }
+    if (status) {
+        params.append('status', status);
+    }
+    if (pesquisa) {
+        params.append('pesquisa', pesquisa);
+    }
+    
+    window.location.href = '/api/exportar-categoria-pdf?' + params.toString();
+}
+
+function fecharModalCategoria() {
+    const modal = document.getElementById('modalCategoria');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Função para atualizar totais gerais (Valor Total Estoque e Valor Gasto)
+// REMOVIDA - Os valores são atualizados individualmente por produto em carregarMovimentacoes()
+
+// Atualizar totais ao carregar a página
+window.addEventListener('DOMContentLoaded', function() {
+    carregarProdutos();
+});
+</script>
+{% endblock %}

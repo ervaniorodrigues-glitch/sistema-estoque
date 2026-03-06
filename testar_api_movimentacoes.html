@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste API Movimentações</title>
+</head>
+<body>
+    <h1>Teste API Movimentações</h1>
+    <button onclick="testar()">Testar API</button>
+    <pre id="resultado"></pre>
+
+    <script>
+        function testar() {
+            console.log('Testando API...');
+            fetch('/api/movimentacoes')
+                .then(r => {
+                    console.log('Response:', r);
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('Dados recebidos:', data);
+                    document.getElementById('resultado').textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(err => {
+                    console.error('Erro:', err);
+                    document.getElementById('resultado').textContent = 'ERRO: ' + err;
+                });
+        }
+        
+        // Testar automaticamente
+        window.onload = testar;
+    </script>
+</body>
+</html>

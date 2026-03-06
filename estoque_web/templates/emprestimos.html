@@ -1,0 +1,1075 @@
+{% extends "base.html" %}
+
+{% block title %}Empréstimo{% endblock %}
+
+{% block content %}
+<style>
+.emprestimo-container {
+    padding: 2px;
+    background: white;
+    height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.form-linha {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 1px;
+    align-items: center;
+}
+
+.form-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+}
+
+.form-campo label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.form-campo input,
+.form-campo select {
+    padding: 2px 6px;
+    border: 2px solid #bdc3c7;
+    border-radius: 3px;
+    font-size: 11px;
+    height: 24px;
+}
+
+.form-campo select option {
+    font-size: 11px;
+}
+
+.botoes-direita {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-self: flex-end;
+    margin-bottom: 3px;
+}
+
+.btn-acao {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn-cadastrar {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-limpar {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-excluir {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-alterar-multiplo {
+    background-color: #ffc107;
+    color: black;
+}
+
+.btn-excluir-multiplo {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-multiplo {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.filtros-section {
+    background: #f8f9fa;
+    padding: 3px;
+    border-radius: 4px;
+    margin: 2px 0;
+    border: 1px solid #dee2e6;
+}
+
+.filtros-titulo {
+    font-size: 11px;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 2px;
+}
+
+.btn-limpar-filtro {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.tabela-section {
+    flex: 1;
+    overflow: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    min-height: 0;
+}
+
+.table-emprestimos {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.table-emprestimos thead {
+    background-color: #4a5568;
+    color: white;
+    position: sticky;
+    top: 0;
+}
+
+.table-emprestimos th {
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.table-emprestimos td {
+    padding: 8px 10px;
+    font-size: 13px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.table-emprestimos tbody tr:hover {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.table-emprestimos tbody tr.selected {
+    background-color: #cfe2ff;
+}
+
+.checkbox-cell {
+    width: 35px;
+    min-width: 35px;
+    max-width: 35px;
+    text-align: center;
+    padding: 4px !important;
+}
+
+.checkbox-cell input[type="checkbox"] {
+    cursor: pointer;
+    width: 15px;
+    height: 15px;
+    margin: 0;
+}
+
+.status-emprestado {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.status-devolvido {
+    color: #28a745;
+    font-weight: 600;
+}
+</style>
+
+<div class="emprestimo-container">
+    <input type="hidden" id="codigo">
+    
+    <!-- Linha 1: Status, Data, Funcionário, Cargo e Botões -->
+    <div class="form-linha">
+        <div class="form-campo" style="width: 120px;">
+            <label>Status:</label>
+            <select id="status" style="width: 100%;">
+                <option value="EMPRESTADO">EMPRESTADO</option>
+                <option value="DEVOLVIDO">DEVOLVIDO</option>
+            </select>
+        </div>
+        <div class="form-campo" style="width: 150px;">
+            <label>Data Lançamento:</label>
+            <input type="datetime-local" id="data" style="width: 100%;">
+        </div>
+        <div class="form-campo" style="width: 150px;">
+            <label>Data Devolução:</label>
+            <input type="datetime-local" id="dataDevolucao" style="width: 100%;">
+        </div>
+        <div class="form-campo" style="width: 250px;">
+            <label>Funcionário</label>
+            <select id="funcionario" style="width: 100%;">
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+        <div class="form-campo" style="width: 200px;">
+            <label>Cargo</label>
+            <input type="text" id="cargo" style="width: 100%;">
+        </div>
+        <div style="flex: 1;"></div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+            <button class="btn-acao btn-cadastrar" id="btnCadastrar">
+                📝 Cadastrar
+            </button>
+            <button class="btn-acao btn-limpar" onclick="limparCampos()">
+                🗑️ Limpar Campo
+            </button>
+            <button class="btn-acao btn-excluir" onclick="excluir()">
+                🗑️ Excluir
+            </button>
+        </div>
+    </div>
+
+    <!-- Linha 2: Cód Prod, Descrição, Quantidade e Observações -->
+    <div class="form-linha">
+        <div class="form-campo" style="width: 100px;">
+            <label>Cód Prod</label>
+            <input type="text" id="codProduto" style="width: 100%;">
+        </div>
+        <div class="form-campo" style="width: 400px; position: relative;">
+            <label>Descrição do Item *</label>
+            <input type="text" id="descricaoItem" placeholder="Digite para buscar..." style="width: 100%;" autocomplete="off">
+            <div id="listaSugestoes" style="display: none; position: absolute; z-index: 9999; background: white; border: 1px solid #ccc; max-height: 200px; overflow-y: auto; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+        </div>
+        <button class="btn-multiplo" onclick="abrirEmprestimoMultiplo()" style="margin-top: 18px;">📋</button>
+        <div class="form-campo" style="width: 80px;">
+            <label>Quantidade</label>
+            <input type="text" id="quantidade" placeholder="" style="width: 100%;" onblur="validarEstoque()">
+        </div>
+        <div class="form-campo" style="flex: 1;">
+            <label>Observações</label>
+            <input type="text" id="observacoes" style="width: 100%;">
+        </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="filtros-section">
+        <div class="filtros-titulo">Filtros</div>
+        <div class="form-linha">
+            <div class="form-campo" style="width: 95px;">
+                <label>Data Inicial</label>
+                <input type="date" id="filtroDataInicial" style="width: 100%;">
+            </div>
+            <div class="form-campo" style="width: 95px;">
+                <label>Data Final</label>
+                <input type="date" id="filtroDataFinal" style="width: 100%;">
+            </div>
+            <div class="form-campo" style="width: 220px;">
+                <label>Descrição do Item</label>
+                <input type="text" id="filtroDescricao" placeholder="Digite para buscar..." style="width: 100%;">
+            </div>
+            <div class="form-campo" style="width: 95px;">
+                <label>Status:</label>
+                <select id="filtroStatus" style="width: 100%;">
+                    <option value="">TODOS</option>
+                    <option value="EMPRESTADO">EMPRESTADO</option>
+                    <option value="DEVOLVIDO">DEVOLVIDO</option>
+                </select>
+            </div>
+            <div class="form-campo" style="width: 60px;">
+                <label>Quantidade:</label>
+                <input type="text" id="quantidadeFiltrada" readonly style="width: 100%; background-color: #f0f0f0;">
+            </div>
+            <div class="form-campo" style="width: 160px;">
+                <label>Funcionário</label>
+                <select id="filtroFuncionario" style="width: 100%;">
+                    <option value="">TODOS</option>
+                </select>
+            </div>
+            <div class="form-campo" style="flex: 1;">
+                <label>Observação</label>
+                <input type="text" id="filtroObservacao" placeholder="Pesquisar por contrato..." style="width: 100%;">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 3px; margin-top: 18px;">
+                <button class="btn-limpar-filtro" onclick="limparFiltros()">
+                    🗑️ Limpar
+                </button>
+                <button class="btn-acao" onclick="exportarExcel()" style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px; font-size: 10px; border: none; cursor: pointer;">
+                    📊 Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABELA -->
+    <div class="tabela-section">
+        <table class="table-emprestimos">
+            <thead>
+                <tr>
+                    <th>Lançamento</th>
+                    <th>Funcionário</th>
+                    <th>Descrição do Item</th>
+                    <th>Status</th>
+                    <th>Devolução</th>
+                    <th>Dias</th>
+                    <th>Observação</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaEmprestimos">
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 30px; color: #95a5a6;">
+                        Nenhum empréstimo encontrado
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let emprestimoSelecionado = null;
+let emprestimosSelecionados = []; // Array para múltiplas seleções
+let dadosOriginais = {};
+let funcionariosMap = {};
+let produtosMap = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const agora = new Date();
+    const dataHoraLocal = new Date(agora.getTime() - agora.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    document.getElementById('data').value = dataHoraLocal;
+    
+    carregarFuncionarios();
+    carregarProdutos();
+    carregarEmprestimos();
+    
+    // Inicializar botão com função padrão
+    document.getElementById('btnCadastrar').onclick = cadastrar;
+    
+    document.getElementById('funcionario').addEventListener('change', aoSelecionarFuncionario);
+    document.getElementById('descricaoItem').addEventListener('change', aoSelecionarProduto);
+    document.getElementById('status').addEventListener('change', atualizarBotaoStatus);
+    
+    document.getElementById('filtroDataInicial').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroDataFinal').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroDescricao').addEventListener('input', aplicarFiltros);
+    document.getElementById('filtroStatus').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroFuncionario').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroObservacao').addEventListener('input', aplicarFiltros);
+    
+    document.getElementById('funcionario').addEventListener('change', monitorarAlteracoes);
+    document.getElementById('observacoes').addEventListener('input', monitorarAlteracoes);
+    document.getElementById('dataDevolucao').addEventListener('change', monitorarAlteracoes);
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            window.location.href = '/estoque';
+        }
+    }, true);
+});
+
+function carregarFuncionarios() {
+    fetch('/api/funcionarios?ativo=ativos')
+        .then(r => r.json())
+        .then(funcionarios => {
+            const select = document.getElementById('funcionario');
+            const selectFiltro = document.getElementById('filtroFuncionario');
+            
+            funcionarios.forEach(f => {
+                funcionariosMap[f.nome] = f.cargo;
+                const option = new Option(f.nome, f.nome);
+                select.add(option);
+                selectFiltro.add(option.cloneNode(true));
+            });
+        });
+}
+
+function carregarProdutos() {
+    const inputDescricao = document.getElementById('descricaoItem');
+    const listaSugestoes = document.getElementById('listaSugestoes');
+    
+    if (!inputDescricao) {
+        console.error('ERRO: Campo descricaoItem não encontrado!');
+        return;
+    }
+    
+    if (!listaSugestoes) {
+        console.error('ERRO: Div listaSugestoes não encontrada!');
+        return;
+    }
+    
+    let timeoutBusca;
+    
+    console.log('carregarProdutos chamado - configurando evento input');
+    
+    // Buscar produtos conforme digita
+    inputDescricao.addEventListener('input', function() {
+        const busca = this.value.trim();
+        
+        console.log('Input detectado:', busca);
+        
+        clearTimeout(timeoutBusca);
+        
+        if (busca.length < 1) {
+            listaSugestoes.style.display = 'none';
+            listaSugestoes.innerHTML = '';
+            return;
+        }
+        
+        // Aguardar 300ms antes de buscar (debounce)
+        timeoutBusca = setTimeout(() => {
+            console.log('Buscando produtos com:', busca);
+            fetch(`/api/produtos?busca=${encodeURIComponent(busca)}&ativo=ativos`)
+                .then(r => r.json())
+                .then(produtos => {
+                    console.log('Produtos encontrados:', produtos.length);
+                    if (produtos.length === 0) {
+                        listaSugestoes.style.display = 'none';
+                        return;
+                    }
+                    
+                    listaSugestoes.innerHTML = produtos.map(p => {
+                        produtosMap[p.descricao] = p.codigo;
+                        return `<div style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;" 
+                                     onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                     onmouseout="this.style.backgroundColor='white'"
+                                     onclick="selecionarProduto('${p.descricao.replace(/'/g, "\\'")}', '${p.codigo}')">
+                                    ${p.descricao}
+                                </div>`;
+                    }).join('');
+                    
+                    listaSugestoes.style.display = 'block';
+                });
+        }, 300);
+    });
+    
+    // Fechar lista ao clicar fora
+    document.addEventListener('click', function(e) {
+        if (!inputDescricao.contains(e.target) && !listaSugestoes.contains(e.target)) {
+            listaSugestoes.style.display = 'none';
+        }
+    });
+}
+
+function selecionarProduto(descricao, codigo) {
+    document.getElementById('descricaoItem').value = descricao;
+    document.getElementById('codProduto').value = codigo;
+    document.getElementById('listaSugestoes').style.display = 'none';
+}
+
+function aoSelecionarFuncionario() {
+    const func = document.getElementById('funcionario').value;
+    if (func && funcionariosMap[func]) {
+        document.getElementById('cargo').value = funcionariosMap[func];
+    }
+}
+
+function aoSelecionarProduto() {
+    const desc = document.getElementById('descricaoItem').value;
+    if (desc && produtosMap[desc]) {
+        document.getElementById('codProduto').value = produtosMap[desc];
+    }
+}
+
+function carregarEmprestimos() {
+    fetch('/api/emprestimos')
+        .then(r => r.json())
+        .then(emprestimos => {
+            exibirEmprestimos(emprestimos);
+        });
+}
+
+function exibirEmprestimos(emprestimos) {
+    const tbody = document.getElementById('tabelaEmprestimos');
+    
+    if (emprestimos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px; color: #95a5a6;">Nenhum empréstimo encontrado</td></tr>';
+        document.getElementById('quantidadeFiltrada').value = '0';
+        return;
+    }
+    
+    console.log('Empréstimos recebidos:', emprestimos);
+    
+    tbody.innerHTML = emprestimos.map((emp, idx) => {
+        const statusClass = emp.status === 'EMPRESTADO' ? 'status-emprestado' : 'status-devolvido';
+        
+        // Remover o ID entre parênteses da descrição
+        let descricaoLimpa = emp.descricao_item;
+        if (descricaoLimpa && descricaoLimpa.includes('(')) {
+            descricaoLimpa = descricaoLimpa.split('(')[0].trim();
+        }
+        
+        // Formatar data com hora em fonte menor
+        let dataFormatada = emp.data;
+        if (emp.data && emp.data.includes(' ')) {
+            const partes = emp.data.split(' ');
+            dataFormatada = `${partes[0]} <span style="font-size: 9px; color: #666;">${partes[1]}</span>`;
+        }
+        
+        // Formatar data devolução com hora em fonte menor
+        let dataDevFormatada = emp.data_devolucao_prevista || '---';
+        if (dataDevFormatada !== '---' && dataDevFormatada.includes(' ')) {
+            const partes = dataDevFormatada.split(' ');
+            dataDevFormatada = `${partes[0]} <span style="font-size: 9px; color: #666;">${partes[1]}</span>`;
+        }
+        
+        // Aplicar cores do backend
+        let estiloLinha = '';
+        if (emp.cor_fundo) {
+            estiloLinha += `background-color: ${emp.cor_fundo};`;
+        }
+        
+        let estiloCelula = '';
+        if (emp.cor_fonte) {
+            estiloCelula += `color: ${emp.cor_fonte};`;
+        }
+        if (emp.fonte_negrito) {
+            estiloCelula += `font-weight: bold;`;
+        }
+        
+        console.log(`Empréstimo ${idx}:`, {
+            cor_fundo: emp.cor_fundo,
+            cor_fonte: emp.cor_fonte,
+            fonte_negrito: emp.fonte_negrito,
+            eh_prorrogacao: emp.eh_prorrogacao,
+            dias: emp.dias
+        });
+        
+        return `
+            <tr onclick="selecionarEmprestimo(${idx}, event)" data-index="${idx}" data-id="${emp.id}" style="${estiloLinha}">
+                <td style="${estiloCelula}">${dataFormatada}</td>
+                <td style="${estiloCelula}">${emp.funcionario}</td>
+                <td style="${estiloCelula}">${descricaoLimpa}</td>
+                <td class="${statusClass}" style="${estiloCelula}">${emp.status}</td>
+                <td style="${estiloCelula}">${dataDevFormatada}</td>
+                <td style="${estiloCelula}">${emp.dias}</td>
+                <td style="${estiloCelula}">${emp.observacoes || ''}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    document.getElementById('quantidadeFiltrada').value = emprestimos.length;
+    window.emprestimosData = emprestimos;
+}
+
+function selecionarEmprestimo(index, event) {
+    const tr = document.querySelector(`tr[data-index="${index}"]`);
+    const emp = window.emprestimosData[index];
+    
+    // SELEÇÃO MÚLTIPLA COM CTRL
+    if (event.ctrlKey) {
+        // Toggle seleção
+        if (tr.classList.contains('selected')) {
+            tr.classList.remove('selected');
+            emprestimosSelecionados = emprestimosSelecionados.filter(e => e.id !== emp.id);
+        } else {
+            tr.classList.add('selected');
+            emprestimosSelecionados.push(emp);
+        }
+        
+        // Se não tem nenhum selecionado, limpa os campos
+        if (emprestimosSelecionados.length === 0) {
+            limparCampos();
+        } else {
+            // Preenche com o último selecionado
+            const ultimo = emprestimosSelecionados[emprestimosSelecionados.length - 1];
+            preencherCampos(ultimo);
+        }
+    } else {
+        // SELEÇÃO SIMPLES (sem Ctrl)
+        document.querySelectorAll('.table-emprestimos tbody tr').forEach(tr => tr.classList.remove('selected'));
+        tr.classList.add('selected');
+        
+        emprestimosSelecionados = [emp];
+        emprestimoSelecionado = emp;
+        preencherCampos(emp);
+    }
+    
+    atualizarBotaoStatus();
+}
+
+function preencherCampos(emp) {
+    emprestimoSelecionado = emp;
+    
+    document.getElementById('codigo').value = emp.codigo || '';
+    document.getElementById('status').value = emp.status;
+    document.getElementById('data').value = emp.data_iso || '';
+    document.getElementById('dataDevolucao').value = emp.data_devolucao_prevista_iso || '';
+    document.getElementById('funcionario').value = emp.funcionario;
+    document.getElementById('cargo').value = emp.cargo || '';
+    document.getElementById('codProduto').value = emp.cod_produto || '';
+    document.getElementById('descricaoItem').value = emp.descricao_item;
+    document.getElementById('quantidade').value = emp.quantidade || 1;
+    document.getElementById('observacoes').value = emp.observacoes || '';
+    
+    dadosOriginais = {
+        funcionario: emp.funcionario,
+        observacoes: emp.observacoes || '',
+        dataDevolucao: emp.data_devolucao_prevista_iso || ''
+    };
+}
+
+function atualizarBotaoStatus() {
+    const btn = document.getElementById('btnCadastrar');
+    const status = document.getElementById('status').value;
+    
+    // Se tem empréstimos selecionados
+    if (emprestimosSelecionados.length > 0) {
+        // Verificar se há seleção mista (emprestados + devolvidos)
+        const statusSelecionados = emprestimosSelecionados.map(e => e.status);
+        const temEmprestado = statusSelecionados.includes('EMPRESTADO');
+        const temDevolvido = statusSelecionados.includes('DEVOLVIDO');
+        
+        // VALIDAÇÃO: Não permitir seleção mista
+        if (temEmprestado && temDevolvido) {
+            btn.textContent = '⚠️ Seleção Mista';
+            btn.className = 'btn-acao';
+            btn.style.backgroundColor = '#dc3545';
+            btn.style.color = 'white';
+            btn.onclick = function() {
+                alert('❌ SELEÇÃO INVÁLIDA!\n\nVocê selecionou itens EMPRESTADOS e DEVOLVIDOS ao mesmo tempo.\n\nPara devolver, selecione apenas itens EMPRESTADOS.\nPara alterar dados, selecione apenas itens do mesmo status.');
+            };
+            return;
+        }
+        
+        // Se todos são DEVOLVIDOS
+        if (temDevolvido && !temEmprestado) {
+            btn.textContent = '✏️ Alterar';
+            btn.className = 'btn-acao';
+            btn.style.backgroundColor = '#ffc107';
+            btn.style.color = 'black';
+            btn.onclick = function() {
+                alert('❌ AÇÃO NÃO PERMITIDA!\n\nItens já DEVOLVIDOS não podem ser alterados para DEVOLVIDO novamente.\n\nSelecione apenas itens EMPRESTADOS para devolver.');
+            };
+            return;
+        }
+        
+        // Se todos são EMPRESTADOS
+        if (temEmprestado && !temDevolvido) {
+            if (status === 'DEVOLVIDO') {
+                // Múltiplas devoluções
+                btn.textContent = emprestimosSelecionados.length > 1 ? 
+                    `✏️ Devolver (${emprestimosSelecionados.length})` : 
+                    '✏️ Devolver';
+                btn.className = 'btn-acao';
+                btn.style.backgroundColor = '#ffc107';
+                btn.style.color = 'black';
+                btn.onclick = emprestimosSelecionados.length > 1 ? 
+                    devolverMultiplos : 
+                    alterarEmprestimo;
+            } else {
+                // Prorrogar ou alterar dados de emprestados
+                btn.textContent = emprestimosSelecionados.length > 1 ? 
+                    `✏️ Prorrogar (${emprestimosSelecionados.length})` : 
+                    '✏️ Prorrogar';
+                btn.className = 'btn-acao';
+                btn.style.backgroundColor = '#ffc107';
+                btn.style.color = 'black';
+                btn.onclick = alterarEmprestimo;
+            }
+        }
+    } else {
+        // Nenhum empréstimo selecionado - botão CADASTRAR azul
+        btn.textContent = '📝 Cadastrar';
+        btn.className = 'btn-acao btn-cadastrar';
+        btn.style.backgroundColor = '';
+        btn.style.color = '';
+        btn.onclick = cadastrar;
+    }
+}
+
+function monitorarAlteracoes() {
+    if (!emprestimoSelecionado) return;
+    
+    const funcAtual = document.getElementById('funcionario').value;
+    const obsAtual = document.getElementById('observacoes').value;
+    const dataDevAtual = document.getElementById('dataDevolucao').value;
+    
+    const funcOriginal = dadosOriginais.funcionario || '';
+    const obsOriginal = dadosOriginais.observacoes || '';
+    const dataDevOriginal = dadosOriginais.dataDevolucao || '';
+    
+    if (funcAtual !== funcOriginal || obsAtual !== obsOriginal || dataDevAtual !== dataDevOriginal) {
+        const btn = document.getElementById('btnCadastrar');
+        btn.textContent = '✏️ Alterar';
+        btn.style.backgroundColor = '#ffc107';
+        btn.style.color = 'black';
+        btn.onclick = alterarEmprestimo;
+        
+        if (dataDevAtual !== dataDevOriginal) {
+            atualizarGridDataDevolucao(dataDevAtual);
+        }
+    } else {
+        atualizarBotaoStatus();
+    }
+}
+
+function atualizarGridDataDevolucao(novaDataISO) {
+    if (!emprestimoSelecionado || !window.emprestimosData) return;
+    
+    const index = window.emprestimosData.findIndex(e => e.id === emprestimoSelecionado.id);
+    if (index === -1) return;
+    
+    let dataFormatada = '---';
+    if (novaDataISO) {
+        try {
+            const partes = novaDataISO.split('T');
+            const data = partes[0];
+            const hora = partes[1] || '';
+            const [ano, mes, dia] = data.split('-');
+            dataFormatada = `${dia}/${mes}/${ano}`;
+            if (hora) {
+                dataFormatada += ` <span style="font-size: 9px; color: #666;">${hora}</span>`;
+            }
+        } catch (e) {
+            console.error('Erro ao converter data:', e);
+        }
+    }
+    
+    const tr = document.querySelector(`tr[data-index="${index}"]`);
+    if (tr) {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length >= 5) {
+            cells[4].innerHTML = dataFormatada;
+        }
+    }
+}
+
+function cadastrar() {
+    const data = document.getElementById('data').value;
+    const dataDevolucao = document.getElementById('dataDevolucao').value;
+    const funcionario = document.getElementById('funcionario').value;
+    const cargo = document.getElementById('cargo').value;
+    const codProduto = document.getElementById('codProduto').value;
+    const descricaoItem = document.getElementById('descricaoItem').value;
+    const quantidade = parseInt(document.getElementById('quantidade').value) || 1;
+    const observacoes = document.getElementById('observacoes').value;
+    
+    if (!funcionario || !descricaoItem) {
+        alert('Preencha Funcionário e Descrição do Item!');
+        return;
+    }
+    
+    if (!quantidade || quantidade <= 0) {
+        alert('Preencha a Quantidade!');
+        return;
+    }
+    
+    // Criar um registro para CADA unidade emprestada
+    const promises = [];
+    for (let i = 0; i < quantidade; i++) {
+        const dados = {
+            data: data,
+            data_devolucao_prevista: dataDevolucao,
+            funcionario: funcionario,
+            cargo: cargo,
+            cod_produto: codProduto,
+            descricao_item: descricaoItem,
+            quantidade: 1, // SEMPRE 1 por registro
+            observacoes: observacoes,
+            status: 'EMPRESTADO'
+        };
+        
+        promises.push(
+            fetch('/api/emprestimos', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(dados)
+            }).then(r => r.json())
+        );
+    }
+    
+    // Aguardar todos os registros serem criados
+    Promise.all(promises)
+        .then(results => {
+            const erros = results.filter(r => !r.success);
+            if (erros.length > 0) {
+                alert(`Erro ao cadastrar ${erros.length} empréstimo(s)`);
+            } else {
+                alert(`${quantidade} empréstimo(s) cadastrado(s) com sucesso!`);
+            }
+            limparCampos();
+            carregarEmprestimos();
+        })
+        .catch(error => {
+            alert('Erro ao cadastrar empréstimos: ' + error);
+            limparCampos();
+        });
+}
+
+function alterarEmprestimo() {
+    if (!emprestimoSelecionado) {
+        alert('Selecione um empréstimo!');
+        return;
+    }
+    
+    const novaDataDevolucao = document.getElementById('dataDevolucao').value;
+    
+    if (!novaDataDevolucao) {
+        alert('Preencha a data de devolução!');
+        return;
+    }
+    
+    const dados = {
+        id: emprestimoSelecionado.id,
+        data_devolucao_prevista: novaDataDevolucao
+    };
+    
+    fetch(`/api/emprestimos/${emprestimoSelecionado.id}/prorrogar`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(dados)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ Prorrogado!');
+            limparCampos();
+            carregarEmprestimos();
+        } else {
+            alert('❌ Erro: ' + (result.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        alert('❌ Erro: ' + error);
+    });
+}
+
+function devolverMultiplos() {
+    if (emprestimosSelecionados.length === 0) {
+        alert('Selecione empréstimos para devolver!');
+        return;
+    }
+    
+    // Validar se todos são EMPRESTADOS
+    const todosEmprestados = emprestimosSelecionados.every(e => e.status === 'EMPRESTADO');
+    if (!todosEmprestados) {
+        alert('❌ ERRO!\n\nApenas itens EMPRESTADOS podem ser devolvidos.\nVerifique sua seleção.');
+        return;
+    }
+    
+    if (!confirm(`Deseja realmente devolver ${emprestimosSelecionados.length} empréstimos?`)) return;
+    
+    const dataDevolucao = document.getElementById('dataDevolucao').value || new Date().toISOString();
+    
+    const promises = emprestimosSelecionados.map(emp => {
+        const dados = {
+            id: emp.id,
+            status: 'DEVOLVIDO',
+            data_devolucao: dataDevolucao
+        };
+        
+        return fetch(`/api/emprestimos/${emp.id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(dados)
+        }).then(r => r.json());
+    });
+    
+    Promise.all(promises)
+        .then(results => {
+            const erros = results.filter(r => !r.success);
+            if (erros.length > 0) {
+                alert(`Erro ao devolver ${erros.length} empréstimo(s)`);
+            } else {
+                alert(`${emprestimosSelecionados.length} empréstimo(s) devolvido(s) com sucesso!`);
+            }
+            limparCampos();
+            carregarEmprestimos();
+        })
+        .catch(error => {
+            alert('Erro ao devolver empréstimos: ' + error);
+        });
+}
+
+function alterarDados() {
+    if (!emprestimoSelecionado) return;
+    
+    if (!confirm('Você deseja realmente alterar?')) return;
+    
+    const dados = {
+        id: emprestimoSelecionado.id,
+        funcionario: document.getElementById('funcionario').value,
+        observacoes: document.getElementById('observacoes').value
+    };
+    
+    fetch(`/api/emprestimos/${emprestimoSelecionado.id}/alterar`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(dados)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('Dados alterados com sucesso!');
+            limparCampos();
+            carregarEmprestimos();
+        } else {
+            alert(result.message || 'Erro ao alterar');
+        }
+    });
+}
+
+function excluir() {
+    if (!emprestimoSelecionado) {
+        alert('Selecione um empréstimo!');
+        return;
+    }
+    
+    if (!confirm('Deseja realmente excluir este empréstimo?')) return;
+    
+    fetch(`/api/emprestimos/${emprestimoSelecionado.id}`, {
+        method: 'DELETE'
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('Empréstimo excluído com sucesso!');
+            limparCampos();
+            carregarEmprestimos();
+        } else {
+            alert(result.message || 'Erro ao excluir');
+        }
+    });
+}
+
+function limparCampos() {
+    document.getElementById('codigo').value = '';
+    document.getElementById('status').value = 'EMPRESTADO';
+    const agora = new Date();
+    const dataHoraLocal = new Date(agora.getTime() - agora.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    document.getElementById('data').value = dataHoraLocal;
+    document.getElementById('dataDevolucao').value = '';
+    document.getElementById('funcionario').value = '';
+    document.getElementById('cargo').value = '';
+    document.getElementById('codProduto').value = '';
+    document.getElementById('descricaoItem').value = '';
+    document.getElementById('quantidade').value = '';
+    document.getElementById('observacoes').value = '';
+    
+    emprestimoSelecionado = null;
+    emprestimosSelecionados = []; // Limpar seleções múltiplas
+    dadosOriginais = {};
+    
+    document.querySelectorAll('.table-emprestimos tbody tr').forEach(tr => tr.classList.remove('selected'));
+    
+    atualizarBotaoStatus();
+}
+
+function aplicarFiltros() {
+    const dataInicial = document.getElementById('filtroDataInicial').value;
+    const dataFinal = document.getElementById('filtroDataFinal').value;
+    const descricao = document.getElementById('filtroDescricao').value;
+    const status = document.getElementById('filtroStatus').value;
+    const funcionario = document.getElementById('filtroFuncionario').value;
+    const observacao = document.getElementById('filtroObservacao').value.toLowerCase();
+    
+    console.log('Aplicando filtros - Descrição:', descricao);
+    
+    let url = '/api/emprestimos?';
+    if (dataInicial) url += `data_inicial=${dataInicial}&`;
+    if (dataFinal) url += `data_final=${dataFinal}&`;
+    if (descricao) url += `descricao=${encodeURIComponent(descricao)}&`;
+    if (status) url += `status=${status}&`;
+    if (funcionario) url += `funcionario=${encodeURIComponent(funcionario)}&`;
+    
+    console.log('URL da requisição:', url);
+    
+    fetch(url)
+        .then(r => r.json())
+        .then(emprestimos => {
+            console.log('Empréstimos retornados:', emprestimos.length);
+            // Filtrar por observação localmente (client-side)
+            if (observacao) {
+                emprestimos = emprestimos.filter(emp => 
+                    (emp.observacoes || '').toLowerCase().includes(observacao)
+                );
+            }
+            exibirEmprestimos(emprestimos);
+        });
+}
+
+function limparFiltros() {
+    document.getElementById('filtroDataInicial').value = '';
+    document.getElementById('filtroDataFinal').value = '';
+    document.getElementById('filtroDescricao').value = '';
+    document.getElementById('filtroStatus').value = '';
+    document.getElementById('filtroFuncionario').value = '';
+    document.getElementById('filtroObservacao').value = '';
+    carregarEmprestimos();
+}
+
+function abrirEmprestimoMultiplo() {
+    window.location.href = '/emprestimo-multiplo';
+}
+
+function validarEstoque() {
+    const quantidade = parseInt(document.getElementById('quantidade').value);
+    const codProduto = document.getElementById('codProduto').value;
+    
+    // Se não preencheu quantidade ou produto, não valida
+    if (!quantidade || quantidade <= 0 || !codProduto) {
+        return;
+    }
+    
+    // Verificar estoque disponível
+    fetch(`/api/produtos/${codProduto}/estoque-disponivel`)
+        .then(r => r.json())
+        .then(estoqueInfo => {
+            if (estoqueInfo.disponivel < quantidade) {
+                alert(`❌ ESTOQUE INSUFICIENTE!\n\nEstoque Total: ${estoqueInfo.total}\nJá Emprestado: ${estoqueInfo.emprestado}\nDisponível: ${estoqueInfo.disponivel}\nVocê solicitou: ${quantidade}\n\nNão é possível emprestar esta quantidade!`);
+                limparCampos();
+            }
+        })
+        .catch(err => {
+            console.error('Erro ao verificar estoque:', err);
+        });
+}
+
+function exportarExcel() {
+    const dataInicial = document.getElementById('filtroDataInicial').value;
+    const dataFinal = document.getElementById('filtroDataFinal').value;
+    const descricao = document.getElementById('filtroDescricao').value;
+    const status = document.getElementById('filtroStatus').value;
+    const funcionario = document.getElementById('filtroFuncionario').value;
+    const observacao = document.getElementById('filtroObservacao').value;
+    
+    let params = new URLSearchParams();
+    if (dataInicial) params.append('data_inicial', dataInicial);
+    if (dataFinal) params.append('data_final', dataFinal);
+    if (descricao) params.append('descricao', descricao);
+    if (status) params.append('status', status);
+    if (funcionario) params.append('funcionario', funcionario);
+    if (observacao) params.append('observacao', observacao);
+    
+    window.location.href = '/api/exportar-emprestimos-excel?' + params.toString();
+}
+
+function exportarPDF() {
+    const dataInicial = document.getElementById('filtroDataInicial').value;
+    const dataFinal = document.getElementById('filtroDataFinal').value;
+    const descricao = document.getElementById('filtroDescricao').value;
+    const status = document.getElementById('filtroStatus').value;
+    const funcionario = document.getElementById('filtroFuncionario').value;
+    const observacao = document.getElementById('filtroObservacao').value;
+    
+    let params = new URLSearchParams();
+    if (dataInicial) params.append('data_inicial', dataInicial);
+    if (dataFinal) params.append('data_final', dataFinal);
+    if (descricao) params.append('descricao', descricao);
+    if (status) params.append('status', status);
+    if (funcionario) params.append('funcionario', funcionario);
+    if (observacao) params.append('observacao', observacao);
+    
+    window.location.href = '/api/exportar-emprestimos-pdf?' + params.toString();
+}
+
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Foto</title>
+</head>
+<body>
+    <h1>Teste de Carregamento de Foto</h1>
+    
+    <h2>Teste 1: Imagem direta</h2>
+    <img src="/static/uploads/produtos/placeholder.svg" style="border: 2px solid red; width: 200px;">
+    
+    <h2>Teste 2: Imagem via JavaScript</h2>
+    <div id="container" style="border: 2px solid blue; width: 200px; height: 200px;">
+        <img id="fotoPreview" src="" style="max-width: 100%; max-height: 100%; display: none;">
+        <span id="semFoto">Sem foto</span>
+    </div>
+    
+    <button onclick="testar()">Carregar Foto</button>
+    
+    <script>
+    function testar() {
+        const img = document.getElementById('fotoPreview');
+        const semFoto = document.getElementById('semFoto');
+        
+        const url = '/static/uploads/produtos/placeholder.svg';
+        console.log('Carregando:', url);
+        
+        img.src = url;
+        img.style.display = 'block';
+        semFoto.style.display = 'none';
+        
+        img.onload = function() {
+            console.log('✓ Imagem carregada!');
+        };
+        
+        img.onerror = function() {
+            console.log('✗ Erro ao carregar');
+        };
+    }
+    </script>
+</body>
+</html>

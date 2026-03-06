@@ -1,0 +1,633 @@
+{% extends "base.html" %}
+
+{% block title %}Entrada Múltipla de Itens{% endblock %}
+
+{% block content %}
+<style id="entrada-style-v2">
+    .entrada-header {
+        background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    
+    .entrada-header h2 {
+        margin: 0;
+        font-size: 28px;
+    }
+    
+    .entrada-header i {
+        font-size: 40px;
+        margin-bottom: 10px;
+    }
+    
+    .form-entrada {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .form-row-entrada {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+        align-items: flex-end;
+    }
+    
+    .form-group-entrada {
+        flex: 1;
+    }
+    
+    .form-group-entrada.small {
+        flex: 0 0 150px;
+    }
+    
+    .form-group-entrada.medium {
+        flex: 0 0 200px;
+    }
+    
+    .form-group-entrada label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .form-group-entrada input,
+    .form-group-entrada select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #cbd5e0;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    /* FORÇAR REMOÇÃO DAS SETINHAS - VERSÃO 2 */
+    #notaFiscal::-webkit-inner-spin-button,
+    #notaFiscal::-webkit-outer-spin-button,
+    #quantidade::-webkit-inner-spin-button,
+    #quantidade::-webkit-outer-spin-button {
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+        display: none !important;
+        margin: 0 !important;
+    }
+    
+    #notaFiscal,
+    #quantidade {
+        -moz-appearance: textfield !important;
+    }
+    
+    /* Remover setinhas dos campos numéricos */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none !important;
+        margin: 0 !important;
+        display: none !important;
+    }
+    
+    input[type="number"] {
+        -moz-appearance: textfield !important;
+    }
+    
+    input[type="text"]::-webkit-inner-spin-button,
+    input[type="text"]::-webkit-outer-spin-button {
+        -webkit-appearance: none !important;
+        margin: 0 !important;
+        display: none !important;
+    }
+    
+    .btn-buscar {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    
+    .btn-buscar:hover {
+        background-color: #2980b9;
+    }
+    
+    .tabela-itens {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    
+    .tabela-itens table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .tabela-itens thead {
+        background-color: #34495e;
+        color: white;
+    }
+    
+    .tabela-itens th {
+        padding: 12px;
+        text-align: left;
+        font-weight: bold;
+    }
+    
+    .tabela-itens td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #ecf0f1;
+    }
+    
+    .tabela-itens tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .btn-excluir {
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    
+    .btn-excluir:hover {
+        background-color: #c0392b;
+    }
+    
+    .acoes-laterais {
+        position: fixed;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .btn-acao {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        transition: all 0.3s;
+    }
+    
+    .btn-acao:hover {
+        transform: translateX(-5px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+    
+    .btn-inserir {
+        background-color: #f39c12;
+    }
+    
+    .btn-excluir-item {
+        background-color: #e74c3c;
+    }
+    
+    .btn-limpar {
+        background-color: #95a5a6;
+    }
+    
+    .btn-finalizar {
+        background-color: #27ae60;
+    }
+    
+    .rodape-entrada {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .total-entrada {
+        text-align: right;
+        font-size: 24px;
+        font-weight: bold;
+        color: #27ae60;
+    }
+</style>
+
+<div class="entrada-header">
+    <i class="fas fa-box-open"></i>
+    <h2>ENTRADA</h2>
+</div>
+
+<div class="form-entrada">
+    <div class="form-row-entrada">
+        <div class="form-group-entrada small">
+            <label>Data</label>
+            <input type="date" id="dataEntrada" value="">
+        </div>
+        <div class="form-group-entrada medium">
+            <label>Nº Nota Fiscal</label>
+            <input id="notaFiscal" class="form-control">
+        </div>
+        <div class="form-group-entrada medium">
+            <label>Fornecedor</label>
+            <select id="fornecedor">
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+        <div class="form-group-entrada medium">
+            <label>Operação</label>
+            <select id="operacao">
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="form-row-entrada">
+        <div class="form-group-entrada small">
+            <label>Código Produto</label>
+            <input type="number" id="codigoProduto">
+        </div>
+        <div class="form-group-entrada">
+            <label>Descrição do Item</label>
+            <select id="descricaoItem">
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+        <div class="form-group-entrada" style="flex: 0 0 50px;">
+            <button class="btn-buscar" onclick="buscarProduto()">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+        <div class="form-group-entrada small">
+            <label>Preço</label>
+            <input type="number" id="preco" step="0.01" value="0">
+        </div>
+        <div class="form-group-entrada small">
+            <label>Qtde</label>
+            <input id="quantidade" value="1" class="form-control">
+        </div>
+        <div class="form-group-entrada small">
+            <label>Total</label>
+            <input type="number" id="totalItem" readonly style="background-color: #ecf0f1;">
+        </div>
+    </div>
+</div>
+
+<div class="tabela-itens">
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 80px;">Código</th>
+                <th>Descrição</th>
+                <th style="width: 120px;">Quantidade</th>
+                <th style="width: 120px;">Preço</th>
+                <th style="width: 120px;">Total</th>
+                <th style="width: 80px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaItens">
+            <tr>
+                <td colspan="6" style="text-align: center; color: #95a5a6; padding: 40px;">
+                    Nenhum item adicionado
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="acoes-laterais">
+    <button class="btn-acao btn-inserir" onclick="inserirItem()">
+        <i class="fas fa-plus"></i> Inserir
+    </button>
+    <button class="btn-acao btn-excluir-item" onclick="excluirItemSelecionado()">
+        <i class="fas fa-trash"></i> Excluir
+    </button>
+    <button class="btn-acao btn-limpar" onclick="limparItens()">
+        <i class="fas fa-broom"></i> Limpar Itens
+    </button>
+    <button class="btn-acao btn-finalizar" onclick="finalizarEntrada()">
+        <i class="fas fa-check"></i> Finalizar
+    </button>
+</div>
+
+<div class="rodape-entrada">
+    <div class="form-row-entrada">
+        <div class="form-group-entrada">
+            <label>Observação</label>
+            <textarea id="observacao" rows="2" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px;"></textarea>
+        </div>
+    </div>
+    <div class="total-entrada">
+        Total da Entrada: R$ <span id="totalEntrada">0,00</span>
+    </div>
+</div>
+
+<script>
+let itensEntrada = [];
+let itemSelecionado = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Definir data atual
+    document.getElementById('dataEntrada').valueAsDate = new Date();
+    
+    // Carregar fornecedores
+    carregarFornecedores();
+    
+    // Carregar operações
+    carregarOperacoes();
+    
+    // Carregar produtos
+    carregarProdutos();
+    
+    // Calcular total do item ao mudar preço ou quantidade
+    document.getElementById('preco').addEventListener('input', calcularTotalItem);
+    document.getElementById('quantidade').addEventListener('input', calcularTotalItem);
+    
+    // Buscar produto ao mudar código
+    document.getElementById('codigoProduto').addEventListener('change', function() {
+        const codigo = this.value;
+        if (codigo) {
+            document.getElementById('descricaoItem').value = codigo;
+            buscarProduto();
+        }
+    });
+    
+    // Atualizar código ao selecionar descrição
+    document.getElementById('descricaoItem').addEventListener('change', function() {
+        const codigo = this.value;
+        if (codigo) {
+            document.getElementById('codigoProduto').value = codigo;
+            buscarProduto();
+        }
+    });
+});
+
+function carregarFornecedores() {
+    fetch('/api/fornecedores?ativo=ativos')
+        .then(r => r.json())
+        .then(fornecedores => {
+            const select = document.getElementById('fornecedor');
+            select.innerHTML = '<option value="">Selecione...</option>';
+            fornecedores.forEach(f => {
+                select.innerHTML += `<option value="${f.nome}">${f.nome}</option>`;
+            });
+        });
+}
+
+function carregarOperacoes() {
+    fetch('/api/operacoes')
+        .then(r => r.json())
+        .then(operacoes => {
+            const select = document.getElementById('operacao');
+            select.innerHTML = '<option value="">Selecione...</option>';
+            operacoes.forEach(o => {
+                select.innerHTML += `<option value="${o.nome}">${o.nome}</option>`;
+            });
+        });
+}
+
+function carregarProdutos() {
+    fetch('/api/produtos?ativo=ativos')
+        .then(r => r.json())
+        .then(produtos => {
+            const select = document.getElementById('descricaoItem');
+            select.innerHTML = '<option value="">Selecione...</option>';
+            produtos.forEach(p => {
+                select.innerHTML += `<option value="${p.codigo}">${p.descricao}</option>`;
+            });
+        });
+}
+
+function buscarProduto() {
+    const codigo = document.getElementById('codigoProduto').value || document.getElementById('descricaoItem').value;
+    
+    if (!codigo) return;
+    
+    fetch(`/api/produtos?busca=&ativo=todos`)
+        .then(r => r.json())
+        .then(produtos => {
+            const produto = produtos.find(p => p.codigo == codigo);
+            if (produto) {
+                document.getElementById('codigoProduto').value = produto.codigo;
+                document.getElementById('descricaoItem').value = produto.codigo;
+                document.getElementById('preco').value = produto.preco_compra || 0;
+                calcularTotalItem();
+            }
+        });
+}
+
+function calcularTotalItem() {
+    const preco = parseFloat(document.getElementById('preco').value) || 0;
+    const quantidade = parseInt(document.getElementById('quantidade').value) || 0;
+    const total = preco * quantidade;
+    document.getElementById('totalItem').value = total.toFixed(2);
+}
+
+function inserirItem() {
+    const codigo = document.getElementById('codigoProduto').value;
+    const descricao = document.getElementById('descricaoItem').selectedOptions[0]?.text;
+    const preco = parseFloat(document.getElementById('preco').value) || 0;
+    const quantidade = parseInt(document.getElementById('quantidade').value) || 0;
+    const total = preco * quantidade;
+    
+    if (!codigo || !descricao || descricao === 'Selecione...') {
+        alert('Selecione um produto!');
+        return;
+    }
+    
+    if (quantidade <= 0) {
+        alert('Quantidade deve ser maior que zero!');
+        return;
+    }
+    
+    // Verificar se produto já existe na lista
+    const itemExistente = itensEntrada.find(item => item.codigo == codigo);
+    if (itemExistente) {
+        alert('Produto já adicionado! Exclua o item existente para adicionar novamente.');
+        return;
+    }
+    
+    const item = {
+        codigo: codigo,
+        descricao: descricao,
+        quantidade: quantidade,
+        preco: preco,
+        total: total
+    };
+    
+    itensEntrada.push(item);
+    atualizarTabela();
+    limparCampos();
+}
+
+function atualizarTabela() {
+    const tbody = document.getElementById('tabelaItens');
+    
+    if (itensEntrada.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; color: #95a5a6; padding: 40px;">
+                    Nenhum item adicionado
+                </td>
+            </tr>
+        `;
+    } else {
+        tbody.innerHTML = itensEntrada.map((item, index) => `
+            <tr onclick="selecionarItem(${index})" style="cursor: pointer;" id="item-${index}">
+                <td>${item.codigo}</td>
+                <td>${item.descricao}</td>
+                <td>${item.quantidade}</td>
+                <td>R$ ${item.preco.toFixed(2)}</td>
+                <td>R$ ${item.total.toFixed(2)}</td>
+                <td>
+                    <button class="btn-excluir" onclick="event.stopPropagation(); excluirItem(${index})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    calcularTotalEntrada();
+}
+
+function selecionarItem(index) {
+    document.querySelectorAll('#tabelaItens tr').forEach(tr => tr.style.backgroundColor = '');
+    document.getElementById(`item-${index}`).style.backgroundColor = '#e3f2fd';
+    itemSelecionado = index;
+}
+
+function excluirItem(index) {
+    if (confirm('Deseja excluir este item?')) {
+        itensEntrada.splice(index, 1);
+        itemSelecionado = null;
+        atualizarTabela();
+    }
+}
+
+function excluirItemSelecionado() {
+    if (itemSelecionado === null) {
+        alert('Selecione um item para excluir!');
+        return;
+    }
+    excluirItem(itemSelecionado);
+}
+
+function limparItens() {
+    if (itensEntrada.length === 0) {
+        alert('Não há itens para limpar!');
+        return;
+    }
+    
+    if (confirm('Deseja limpar todos os itens?')) {
+        itensEntrada = [];
+        itemSelecionado = null;
+        atualizarTabela();
+    }
+}
+
+function calcularTotalEntrada() {
+    const total = itensEntrada.reduce((sum, item) => sum + item.total, 0);
+    document.getElementById('totalEntrada').textContent = total.toFixed(2).replace('.', ',');
+}
+
+function limparCampos() {
+    document.getElementById('codigoProduto').value = '';
+    document.getElementById('descricaoItem').value = '';
+    document.getElementById('preco').value = '0';
+    document.getElementById('quantidade').value = '1';
+    document.getElementById('totalItem').value = '';
+}
+
+let processandoEntrada = false;
+
+function finalizarEntrada() {
+    if (processandoEntrada) {
+        return; // Evita cliques duplicados
+    }
+    
+    if (itensEntrada.length === 0) {
+        alert('Adicione pelo menos um item!');
+        return;
+    }
+    
+    const data = document.getElementById('dataEntrada').value;
+    const notaFiscal = document.getElementById('notaFiscal').value;
+    const fornecedor = document.getElementById('fornecedor').value;
+    const operacao = document.getElementById('operacao').value;
+    const observacao = document.getElementById('observacao').value;
+    
+    if (!data) {
+        alert('Informe a data!');
+        return;
+    }
+    
+    if (!notaFiscal) {
+        alert('Informe o número da nota fiscal!');
+        return;
+    }
+    
+    // Calcular totais
+    const totalItens = itensEntrada.length;
+    const totalGeral = itensEntrada.reduce((sum, item) => sum + item.total, 0);
+    
+    // Confirmar finalização
+    let mensagem = `Finalizar entrada?\n\n`;
+    mensagem += `Fornecedor: ${fornecedor || 'Não informado'}\n`;
+    mensagem += `Nota Fiscal: ${notaFiscal}\n`;
+    mensagem += `Total de Itens: ${totalItens}\n`;
+    mensagem += `Valor Total: R$ ${totalGeral.toFixed(2)}\n`;
+    if (observacao) {
+        mensagem += `Observação: ${observacao}\n`;
+    }
+    mensagem += `\nEsta ação irá dar entrada no estoque!`;
+    
+    if (!confirm(mensagem)) {
+        return;
+    }
+    
+    processandoEntrada = true; // Bloqueia novos cliques
+    
+    const entrada = {
+        data: data,
+        nota_fiscal: notaFiscal,
+        fornecedor: fornecedor,
+        operacao: operacao,
+        observacao: observacao,
+        itens: itensEntrada
+    };
+    
+    fetch('/api/entrada-multipla', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(entrada)
+    })
+    .then(r => r.json())
+    .then(response => {
+        if (response.success) {
+            alert(`Entrada finalizada com sucesso!\n\nTotal de Itens: ${totalItens}\nEntradas de estoque processadas!`);
+            // Redirecionar para a página de estoque
+            window.location.href = '/estoque';
+        } else {
+            alert('Erro: ' + response.message);
+            processandoEntrada = false; // Libera em caso de erro
+        }
+    })
+    .catch(error => {
+        alert('Erro ao registrar entrada: ' + error);
+        processandoEntrada = false; // Libera em caso de erro
+    });
+}
+</script>
+{% endblock %}

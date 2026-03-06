@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Monitor de Atividade do Usuário",
+  "description": "Monitora atividades do usuário e notifica sobre mudanças importantes no código ou sistema",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "estoque_web/**/*.html",
+      "estoque_web/**/*.py",
+      "estoque_web/**/*.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "O usuário editou um arquivo. Verifique se há mudanças importantes e pergunte se ele quer testar antes de enviar para o GitHub. Se for um arquivo crítico (app.py, estoque.html), ofereça para validar a sintaxe."
+  }
+}

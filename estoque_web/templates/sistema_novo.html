@@ -1,0 +1,387 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Sistema{% endblock %}
+
+{% block content %}
+<style>
+    .sistema-container {
+        padding: 8px;
+        background-color: #f0f0f0;
+        min-height: calc(100vh - 60px);
+    }
+    
+    .sistema-grid {
+        display: flex;
+        gap: 8px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .sistema-box {
+        flex: 1;
+        background: white;
+        border: 1px solid #cbd5e0;
+        border-radius: 4px;
+        padding: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .box-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .box-title i {
+        margin-right: 6px;
+    }
+    
+    .menu-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .menu-list li {
+        margin-bottom: 6px;
+    }
+    
+    .menu-list a {
+        color: #3182ce;
+        text-decoration: none;
+        font-size: 13px;
+        display: block;
+        padding: 4px 0;
+    }
+    
+    .menu-list a:hover {
+        text-decoration: underline;
+        color: #2c5aa0;
+    }
+    
+    .menu-list a i {
+        margin-right: 6px;
+        width: 16px;
+        text-align: center;
+    }
+</style>
+
+<div class="sistema-container">
+    <div class="sistema-grid">
+        <!-- Backup e Proteção -->
+        <div class="sistema-box">
+            <div class="box-title">
+                <i class="fas fa-shield-alt"></i> Backup e Proteção
+            </div>
+            <ul class="menu-list">
+                <li><a href="#" onclick="criarBackupManual(); return false;">
+                    <i class="fas fa-save"></i> Backup Manual
+                </a></li>
+                <li><a href="#" onclick="restaurarBackup(); return false;">
+                    <i class="fas fa-undo"></i> Restaurar Backup
+                </a></li>
+                <li><a href="#" onclick="statusSistema(); return false;">
+                    <i class="fas fa-info-circle"></i> Status do Sistema
+                </a></li>
+                <li><a href="#" onclick="validarBanco(); return false;">
+                    <i class="fas fa-check-circle"></i> Validar Banco
+                </a></li>
+                <li><a href="#" onclick="listarBackups(); return false;">
+                    <i class="fas fa-list"></i> Listar Backups
+                </a></li>
+            </ul>
+        </div>
+        
+        <!-- Configurações -->
+        <div class="sistema-box">
+            <div class="box-title">
+                <i class="fas fa-cog"></i> Configurações
+            </div>
+            <ul class="menu-list">
+                <li><a href="#" onclick="abrirConfiguracoes(); return false;">
+                    <i class="fas fa-building"></i> Configurações de Relatórios
+                </a></li>
+                <li><a href="#" onclick="cadastroUsuarios(); return false;">
+                    <i class="fas fa-user-plus"></i> Cadastro de Usuários
+                </a></li>
+                <li><a href="#" onclick="abrirAutorizacaoSenhas(); return false;">
+                    <i class="fas fa-key"></i> Autorização de Senhas
+                </a></li>
+            </ul>
+        </div>
+        
+        <!-- Limpeza de Dados -->
+        <div class="sistema-box">
+            <div class="box-title">
+                <i class="fas fa-broom"></i> Limpeza de Dados
+            </div>
+            <ul class="menu-list">
+                <li><a href="#" onclick="zerarTudo(); return false;">
+                    <i class="fas fa-trash-alt"></i> Zerar Tudo
+                </a></li>
+                <li><a href="#" onclick="limparMovimentacoes(); return false;">
+                    <i class="fas fa-exchange-alt"></i> Limpar Movimentações
+                </a></li>
+                <li><a href="#" onclick="zerarProdutos(); return false;">
+                    <i class="fas fa-box"></i> Zerar Produtos/Estoque
+                </a></li>
+                <li><a href="#" onclick="zerarFuncionarios(); return false;">
+                    <i class="fas fa-users"></i> Zerar Funcionários
+                </a></li>
+                <li><a href="#" onclick="zerarFornecedores(); return false;">
+                    <i class="fas fa-truck"></i> Zerar Fornecedores
+                </a></li>
+                <li><a href="#" onclick="zerarClientes(); return false;">
+                    <i class="fas fa-user-friends"></i> Zerar Clientes
+                </a></li>
+                <li><a href="#" onclick="zerarEmprestimos(); return false;">
+                    <i class="fas fa-handshake"></i> Zerar Empréstimos
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+function criarBackupManual() {
+    if (!confirm('Deseja criar um backup completo?\n\nSerá feito download de um arquivo ZIP com:\n• Banco de dados\n• Todas as fotos dos produtos')) return;
+    
+    window.location.href = '/api/backup/download';
+    
+    setTimeout(() => {
+        alert('✅ Backup iniciado!\n\nO arquivo será salvo na sua pasta Downloads.');
+    }, 500);
+}
+
+function restaurarBackup() {
+    if (!confirm('⚠️ ATENÇÃO!\n\nRestaurar um backup irá SUBSTITUIR todos os dados atuais!\n\nDeseja continuar?')) return;
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.zip';
+    
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (!file.name.endsWith('.zip')) {
+            alert('❌ Erro: Selecione um arquivo .zip');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('backup', file);
+        
+        alert('⏳ Restaurando backup...\n\nAguarde, isso pode levar alguns segundos.');
+        
+        fetch('/api/backup/restaurar', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(result => {
+            if (result.success) {
+                alert('✅ ' + result.message + '\n\nA página será recarregada.');
+                location.reload();
+            } else {
+                alert('❌ Erro: ' + result.message);
+            }
+        })
+        .catch(err => {
+            alert('❌ Erro ao restaurar: ' + err.message);
+        });
+    };
+    
+    input.click();
+}
+
+function statusSistema() {
+    fetch('/api/sistema/status')
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            let msg = '📊 Status do Sistema\n\n';
+            msg += `📦 Produtos: ${result.produtos}\n`;
+            msg += `👥 Funcionários: ${result.funcionarios}\n`;
+            msg += `🚚 Fornecedores: ${result.fornecedores}\n`;
+            msg += `👤 Clientes: ${result.clientes}\n`;
+            msg += `🤝 Empréstimos Ativos: ${result.emprestimos_ativos}\n`;
+            msg += `📊 Movimentações: ${result.movimentacoes}\n`;
+            msg += `💾 Tamanho do Banco: ${result.tamanho_banco}`;
+            alert(msg);
+        } else {
+            alert('❌ Erro ao obter status: ' + result.message);
+        }
+    });
+}
+
+function validarBanco() {
+    fetch('/api/sistema/validar-banco')
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            if (result.valido) {
+                alert('✅ ' + result.message);
+            } else {
+                let msg = '⚠️ Problemas encontrados:\n\n';
+                result.problemas.forEach(p => {
+                    msg += `• ${p}\n`;
+                });
+                alert(msg);
+            }
+        } else {
+            alert('❌ Erro ao validar: ' + result.message);
+        }
+    });
+}
+
+function listarBackups() {
+    fetch('/api/backup/listar')
+    .then(r => r.json())
+    .then(backups => {
+        if (backups.length === 0) {
+            alert('Nenhum backup encontrado.');
+            return;
+        }
+        
+        let msg = '📋 Backups Disponíveis:\n\n';
+        backups.forEach(b => {
+            msg += `📁 ${b.nome}\n`;
+            msg += `   Data: ${b.data}\n`;
+            msg += `   Tamanho: ${(b.tamanho / 1024 / 1024).toFixed(2)} MB\n\n`;
+        });
+        alert(msg);
+    });
+}
+
+function abrirConfiguracoes() {
+    window.location.href = '/configuracoes/relatorios';
+}
+
+function cadastroUsuarios() {
+    alert('👤 Cadastro de Usuários\n\nEm desenvolvimento...');
+}
+
+function abrirAutorizacaoSenhas() {
+    alert('🔐 Autorização de Senhas\n\nEm desenvolvimento...');
+}
+
+function zerarTudo() {
+    if (!confirm('⚠️ ATENÇÃO CRÍTICA!\n\nDeseja realmente ZERAR TODOS OS DADOS?\n\nEsta ação NÃO PODE SER DESFEITA!')) return;
+    if (!confirm('⚠️ ÚLTIMA CONFIRMAÇÃO!\n\nVocê está prestes a APAGAR TUDO!\n\nDeseja continuar?')) return;
+    
+    fetch('/api/limpeza/tudo', {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ ' + result.message);
+            location.reload();
+        } else {
+            alert('❌ Erro: ' + result.message);
+        }
+    });
+}
+
+function limparMovimentacoes() {
+    if (!confirm('⚠️ ATENÇÃO!\n\nDeseja realmente limpar TODAS as movimentações?\n\nEsta ação não pode ser desfeita!')) return;
+    
+    fetch('/api/limpeza/movimentacoes', {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ ' + result.message);
+        } else {
+            alert('❌ Erro: ' + result.message);
+        }
+    });
+}
+
+function zerarProdutos() {
+    if (!confirm('⚠️ ATENÇÃO!\n\nDeseja realmente limpar TODOS os produtos cadastrados?\n\nIsso irá apagar todos os produtos e zerar o estoque.\nAs movimentações (entradas/saídas/gastos) serão mantidas.\n\nEsta ação não pode ser desfeita!')) return;
+    
+    fetch('/api/limpeza/produtos', {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ ' + result.message);
+            location.reload();
+        } else {
+            alert('❌ Erro: ' + result.message);
+        }
+    });
+}
+
+function zerarFuncionarios() {
+    if (!confirm('⚠️ ATENÇÃO!\n\nDeseja realmente limpar TODOS os funcionários?\n\nEsta ação não pode ser desfeita!')) return;
+    
+    fetch('/api/limpeza/funcionarios', {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ ' + result.message);
+        } else {
+            alert('❌ Erro: ' + result.message);
+        }
+    });
+}
+
+function zerarFornecedores() {
+    if (!confirm('⚠️ ATENÇÃO!\n\nDeseja realmente limpar TODOS os fornecedores?\n\nEsta ação não pode ser desfeita!')) return;
+    
+    fetch('/api/limpeza/fornecedores', {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ ' + result.message);
+        } else {
+            alert('❌ Erro: ' + result.message);
+        }
+    });
+}
+
+function zerarClientes() {
+    if (!confirm('⚠️ ATENÇÃO!\n\nDeseja realmente limpar TODOS os clientes?\n\nEsta ação não pode ser desfeita!')) return;
+    
+    fetch('/api/limpeza/clientes', {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ ' + result.message);
+        } else {
+            alert('❌ Erro: ' + result.message);
+        }
+    });
+}
+
+function zerarEmprestimos() {
+    if (!confirm('⚠️ ATENÇÃO!\n\nDeseja realmente limpar TODOS os empréstimos?\n\nEsta ação não pode ser desfeita!')) return;
+    
+    fetch('/api/limpeza/emprestimos', {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ ' + result.message);
+        } else {
+            alert('❌ Erro: ' + result.message);
+        }
+    });
+}
+</script>
+{% endblock %}

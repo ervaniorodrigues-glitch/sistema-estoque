@@ -1,0 +1,958 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastros Diversos{% endblock %}
+
+{% block content %}
+<style>
+/* Container principal com altura fixa */
+.cadastros-container {
+    height: calc(100vh - 60px);
+    overflow: hidden;
+    padding: 10px;
+    background: #f5f6fa;
+}
+
+/* Grid responsivo */
+.cadastros-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 15px;
+    height: 100%;
+}
+
+/* Card com altura fixa */
+.cadastro-card {
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #cbd5e0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Header fixo do card */
+.cadastro-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    padding: 8px 12px;
+    background-color: #4a5568;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.cadastro-header .icon {
+    font-size: 14px;
+    margin-right: 6px;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-header {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.btn-header:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.btn-header.btn-danger {
+    background: rgba(231, 76, 60, 0.8);
+}
+
+.btn-header.btn-danger:hover {
+    background: rgba(192, 57, 43, 0.9);
+}
+
+/* Área de input fixa */
+.input-section {
+    padding: 12px 15px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    flex-shrink: 0;
+}
+
+.input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 4px 8px;
+    border: 2px solid #bdc3c7;
+    border-radius: 3px;
+    font-size: 12px;
+    height: 28px;
+    transition: all 0.2s;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #3182ce;
+    box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.1);
+}
+
+.btn-cadastrar {
+    background-color: #4a5568;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 11px;
+    height: 28px;
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-cadastrar:hover {
+    background-color: #2d3748;
+    transform: translateY(-1px);
+}
+
+.btn-cadastrar:active {
+    transform: scale(0.98);
+}
+
+/* Lista com scroll */
+.lista-items {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: white;
+    min-height: 0;
+}
+
+/* Scrollbar customizada */
+.lista-items::-webkit-scrollbar {
+    width: 6px;
+}
+
+.lista-items::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.lista-items::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+}
+
+.lista-items::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* Items da lista */
+.item {
+    padding: 4px 15px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.item:hover {
+    background: #f8f9fa;
+}
+
+.item:last-child {
+    border-bottom: none;
+}
+
+.item-nome {
+    font-size: 12px;
+    color: #2d3748;
+    font-weight: 500;
+}
+
+.btn-excluir {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.btn-excluir:hover {
+    background: #c0392b;
+}
+
+.total-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Mensagem quando vazio */
+.lista-vazia {
+    padding: 30px 15px;
+    text-align: center;
+    color: #a0aec0;
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* Modal para adicionar múltiplos */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 4px;
+    padding: 20px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #2d3748;
+}
+
+.modal-textarea {
+    width: 100%;
+    height: 200px;
+    padding: 8px;
+    border: 2px solid #bdc3c7;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    resize: vertical;
+}
+
+.modal-textarea:focus {
+    outline: none;
+    border-color: #3182ce;
+    box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.1);
+}
+
+.modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+
+.modal-btn {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modal-btn-primary {
+    background-color: #4a5568;
+    color: white;
+}
+
+.modal-btn-primary:hover {
+    background-color: #2d3748;
+}
+
+.modal-btn-secondary {
+    background-color: #e2e8f0;
+    color: #2d3748;
+}
+
+.modal-btn-secondary:hover {
+    background-color: #cbd5e0;
+}
+
+/* Responsivo */
+@media (max-width: 1200px) {
+    .cadastros-grid {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .cadastros-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .cadastro-card {
+        max-height: 400px;
+    }
+}
+</style>
+
+<div class="cadastros-container">
+    <div class="cadastros-grid">
+        <!-- UNIDADES -->
+        <div class="cadastro-card" style="grid-row: span 5;">
+            <div class="cadastro-header">
+                <div>
+                    <span class="icon">📦</span>
+                    <span>Unidades</span>
+                </div>
+                <div class="header-buttons">
+                    <button class="btn-header" onclick="abrirPadrao('unidades')" title="Ver padrão">
+                        <i class="fas fa-star"></i> Padrão
+                    </button>
+                    <button class="btn-header" onclick="abrirModalMultiplos('unidades')" title="Adicionar múltiplos">
+                        <i class="fas fa-list"></i> Múltiplos
+                    </button>
+                    <button class="btn-header btn-danger" onclick="limparTudo('unidades')" title="Limpar tudo">
+                        <i class="fas fa-trash-alt"></i> Limpar
+                    </button>
+                    <span class="total-badge" id="totalUnidades">0</span>
+                </div>
+            </div>
+            <div class="input-section">
+                <div class="input-group">
+                    <input type="text" id="inputUnidade" placeholder="Digite a unidade (ex: UN, KG, L)..." onkeypress="if(event.key==='Enter') cadastrarUnidade()">
+                    <button class="btn-cadastrar" onclick="cadastrarUnidade()">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </div>
+            </div>
+            <div class="lista-items" id="listaUnidades">
+                <div class="lista-vazia">Nenhuma unidade cadastrada</div>
+            </div>
+        </div>
+
+        <!-- MARCAS -->
+        <div class="cadastro-card" style="grid-row: span 5;">
+            <div class="cadastro-header">
+                <div>
+                    <span class="icon">🏷️</span>
+                    <span>Marcas</span>
+                </div>
+                <div class="header-buttons">
+                    <button class="btn-header" onclick="abrirPadrao('marcas')" title="Ver padrão">
+                        <i class="fas fa-star"></i> Padrão
+                    </button>
+                    <button class="btn-header" onclick="abrirModalMultiplos('marcas')" title="Adicionar múltiplos">
+                        <i class="fas fa-list"></i> Múltiplos
+                    </button>
+                    <button class="btn-header btn-danger" onclick="limparTudo('marcas')" title="Limpar tudo">
+                        <i class="fas fa-trash-alt"></i> Limpar
+                    </button>
+                    <span class="total-badge" id="totalMarcas">0</span>
+                </div>
+            </div>
+            <div class="input-section">
+                <div class="input-group">
+                    <input type="text" id="inputMarca" placeholder="Digite a marca..." onkeypress="if(event.key==='Enter') cadastrarMarca()">
+                    <button class="btn-cadastrar" onclick="cadastrarMarca()">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </div>
+            </div>
+            <div class="lista-items" id="listaMarcas">
+                <div class="lista-vazia">Nenhuma marca cadastrada</div>
+            </div>
+        </div>
+
+        <!-- CATEGORIAS -->
+        <div class="cadastro-card" style="grid-row: span 5;">
+            <div class="cadastro-header">
+                <div>
+                    <span class="icon">📂</span>
+                    <span>Categorias</span>
+                </div>
+                <div class="header-buttons">
+                    <button class="btn-header" onclick="abrirPadrao('categorias')" title="Ver padrão">
+                        <i class="fas fa-star"></i> Padrão
+                    </button>
+                    <button class="btn-header" onclick="abrirModalMultiplos('categorias')" title="Adicionar múltiplos">
+                        <i class="fas fa-list"></i> Múltiplos
+                    </button>
+                    <button class="btn-header btn-danger" onclick="limparTudo('categorias')" title="Limpar tudo">
+                        <i class="fas fa-trash-alt"></i> Limpar
+                    </button>
+                    <span class="total-badge" id="totalCategorias">0</span>
+                </div>
+            </div>
+            <div class="input-section">
+                <div class="input-group">
+                    <input type="text" id="inputCategoria" placeholder="Digite a categoria..." onkeypress="if(event.key==='Enter') cadastrarCategoria()">
+                    <button class="btn-cadastrar" onclick="cadastrarCategoria()">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </div>
+            </div>
+            <div class="lista-items" id="listaCategorias">
+                <div class="lista-vazia">Nenhuma categoria cadastrada</div>
+            </div>
+        </div>
+
+        <!-- OPERAÇÕES -->
+        <div class="cadastro-card" style="grid-row: span 5;">
+            <div class="cadastro-header">
+                <div>
+                    <span class="icon">⚙️</span>
+                    <span>Operações</span>
+                </div>
+                <div class="header-buttons">
+                    <button class="btn-header" onclick="abrirPadrao('operacoes')" title="Ver padrão">
+                        <i class="fas fa-star"></i> Padrão
+                    </button>
+                    <button class="btn-header" onclick="abrirModalMultiplos('operacoes')" title="Adicionar múltiplos">
+                        <i class="fas fa-list"></i> Múltiplos
+                    </button>
+                    <button class="btn-header btn-danger" onclick="limparTudo('operacoes')" title="Limpar tudo">
+                        <i class="fas fa-trash-alt"></i> Limpar
+                    </button>
+                    <span class="total-badge" id="totalOperacoes">0</span>
+                </div>
+            </div>
+            <div class="input-section">
+                <div class="input-group">
+                    <input type="text" id="inputOperacao" placeholder="Digite a operação..." onkeypress="if(event.key==='Enter') cadastrarOperacao()">
+                    <button class="btn-cadastrar" onclick="cadastrarOperacao()">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </div>
+            </div>
+            <div class="lista-items" id="listaOperacoes">
+                <div class="lista-vazia">Nenhuma operação cadastrada</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver/editar padrão -->
+<div class="modal-overlay" id="modalPadrao">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span id="modalPadraoTitulo">Padrão - Unidades</span>
+        </div>
+        <textarea class="modal-textarea" id="modalPadraoTextarea" placeholder="Itens padrão..."></textarea>
+        <div class="modal-footer">
+            <button class="modal-btn modal-btn-secondary" onclick="fecharModalPadrao()">Cancelar</button>
+            <button class="modal-btn modal-btn-secondary" onclick="restaurarPadrao()" style="background-color: #f39c12; color: white;">
+                <i class="fas fa-undo"></i> Restaurar Padrão
+            </button>
+            <button class="modal-btn modal-btn-primary" onclick="salvarPadrao()">
+                <i class="fas fa-save"></i> Salvar Edição
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para adicionar múltiplos -->
+<div class="modal-overlay" id="modalMultiplos">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span id="modalTitulo">Adicionar Múltiplos</span>
+        </div>
+        <textarea class="modal-textarea" id="modalTextarea" placeholder="Digite um item por linha...&#10;Exemplo:&#10;UN&#10;KG&#10;L&#10;CX"></textarea>
+        <div class="modal-footer">
+            <button class="modal-btn modal-btn-secondary" onclick="fecharModal()">Cancelar</button>
+            <button class="modal-btn modal-btn-primary" onclick="salvarMultiplos()">
+                <i class="fas fa-save"></i> Salvar Todos
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let tipoAtual = '';
+
+document.addEventListener('DOMContentLoaded', function() {
+    carregarTodos();
+    
+    // Fechar modal ao clicar fora
+    document.getElementById('modalMultiplos').addEventListener('click', function(e) {
+        if (e.target === this) {
+            fecharModal();
+        }
+    });
+});
+
+function carregarTodos() {
+    carregarUnidades();
+    carregarMarcas();
+    carregarCategorias();
+    carregarOperacoes();
+}
+
+// ========== MODAL MÚLTIPLOS ==========
+function abrirModalMultiplos(tipo) {
+    tipoAtual = tipo;
+    const titulos = {
+        'unidades': 'Adicionar Múltiplas Unidades',
+        'marcas': 'Adicionar Múltiplas Marcas',
+        'categorias': 'Adicionar Múltiplas Categorias',
+        'operacoes': 'Adicionar Múltiplas Operações'
+    };
+    
+    document.getElementById('modalTitulo').textContent = titulos[tipo];
+    document.getElementById('modalTextarea').value = '';
+    document.getElementById('modalMultiplos').classList.add('active');
+    document.getElementById('modalTextarea').focus();
+}
+
+function fecharModal() {
+    document.getElementById('modalMultiplos').classList.remove('active');
+    tipoAtual = '';
+}
+
+async function salvarMultiplos() {
+    const textarea = document.getElementById('modalTextarea');
+    const linhas = textarea.value.split('\n').map(l => l.trim()).filter(l => l !== '');
+    
+    if (linhas.length === 0) {
+        alert('Digite pelo menos um item!');
+        return;
+    }
+    
+    const endpoints = {
+        'unidades': '/api/unidades',
+        'marcas': '/api/marcas',
+        'categorias': '/api/categorias',
+        'operacoes': '/api/operacoes'
+    };
+    
+    const funcoes = {
+        'unidades': carregarUnidades,
+        'marcas': carregarMarcas,
+        'categorias': carregarCategorias,
+        'operacoes': carregarOperacoes
+    };
+    
+    let sucesso = 0;
+    let erros = 0;
+    
+    for (const linha of linhas) {
+        try {
+            const response = await fetch(endpoints[tipoAtual], {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({nome: linha})
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                sucesso++;
+            } else {
+                erros++;
+            }
+        } catch (error) {
+            erros++;
+        }
+    }
+    
+    alert(`Cadastro concluído!\n✓ ${sucesso} itens adicionados\n✗ ${erros} itens com erro (duplicados ou inválidos)`);
+    
+    funcoes[tipoAtual]();
+    fecharModal();
+}
+
+// ========== LIMPAR TUDO ==========
+function limparTudo(tipo) {
+    const nomes = {
+        'unidades': 'unidades',
+        'marcas': 'marcas',
+        'categorias': 'categorias',
+        'operacoes': 'operações'
+    };
+    
+    if (!confirm(`Deseja realmente EXCLUIR TODAS as ${nomes[tipo]}?\n\nEsta ação não pode ser desfeita!`)) {
+        return;
+    }
+    
+    const endpoints = {
+        'unidades': '/api/unidades',
+        'marcas': '/api/marcas',
+        'categorias': '/api/categorias',
+        'operacoes': '/api/operacoes'
+    };
+    
+    const funcoes = {
+        'unidades': carregarUnidades,
+        'marcas': carregarMarcas,
+        'categorias': carregarCategorias,
+        'operacoes': carregarOperacoes
+    };
+    
+    // Buscar todos os itens e excluir
+    fetch(endpoints[tipo])
+        .then(r => r.json())
+        .then(async items => {
+            for (const item of items) {
+                await fetch(`${endpoints[tipo]}/${item.id}`, {method: 'DELETE'});
+            }
+            alert(`Todas as ${nomes[tipo]} foram excluídas!`);
+            funcoes[tipo]();
+        });
+}
+
+// ========== UNIDADES ==========
+function carregarUnidades() {
+    fetch('/api/unidades')
+        .then(r => r.json())
+        .then(items => {
+            const lista = document.getElementById('listaUnidades');
+            if (items.length === 0) {
+                lista.innerHTML = '<div class="lista-vazia">Nenhuma unidade cadastrada</div>';
+            } else {
+                lista.innerHTML = items.map(item => `
+                    <div class="item">
+                        <span class="item-nome">${item.nome}</span>
+                        <button class="btn-excluir" onclick="excluirUnidade(${item.id}, '${item.nome}')">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('totalUnidades').textContent = items.length;
+        });
+}
+
+function cadastrarUnidade() {
+    const input = document.getElementById('inputUnidade');
+    const nome = input.value.trim();
+    
+    if (!nome) {
+        alert('Digite uma unidade!');
+        return;
+    }
+    
+    fetch('/api/unidades', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({nome: nome})
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            input.value = '';
+            carregarUnidades();
+        } else {
+            alert(result.message || 'Erro ao cadastrar');
+        }
+    });
+}
+
+function excluirUnidade(id, nome) {
+    if (confirm(`Deseja realmente excluir a unidade "${nome}"?`)) {
+        fetch(`/api/unidades/${id}`, {method: 'DELETE'})
+            .then(r => r.json())
+            .then(() => carregarUnidades());
+    }
+}
+
+// ========== MARCAS ==========
+function carregarMarcas() {
+    fetch('/api/marcas')
+        .then(r => r.json())
+        .then(items => {
+            const lista = document.getElementById('listaMarcas');
+            if (items.length === 0) {
+                lista.innerHTML = '<div class="lista-vazia">Nenhuma marca cadastrada</div>';
+            } else {
+                lista.innerHTML = items.map(item => `
+                    <div class="item">
+                        <span class="item-nome">${item.nome}</span>
+                        <button class="btn-excluir" onclick="excluirMarca(${item.id}, '${item.nome}')">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('totalMarcas').textContent = items.length;
+        });
+}
+
+function cadastrarMarca() {
+    const input = document.getElementById('inputMarca');
+    const nome = input.value.trim();
+    
+    if (!nome) {
+        alert('Digite uma marca!');
+        return;
+    }
+    
+    fetch('/api/marcas', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({nome: nome})
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            input.value = '';
+            carregarMarcas();
+        } else {
+            alert(result.message || 'Erro ao cadastrar');
+        }
+    });
+}
+
+function excluirMarca(id, nome) {
+    if (confirm(`Deseja realmente excluir a marca "${nome}"?`)) {
+        fetch(`/api/marcas/${id}`, {method: 'DELETE'})
+            .then(r => r.json())
+            .then(() => carregarMarcas());
+    }
+}
+
+// ========== CATEGORIAS ==========
+function carregarCategorias() {
+    fetch('/api/categorias')
+        .then(r => r.json())
+        .then(items => {
+            const lista = document.getElementById('listaCategorias');
+            if (items.length === 0) {
+                lista.innerHTML = '<div class="lista-vazia">Nenhuma categoria cadastrada</div>';
+            } else {
+                lista.innerHTML = items.map(item => `
+                    <div class="item">
+                        <span class="item-nome">${item.nome}</span>
+                        <button class="btn-excluir" onclick="excluirCategoria(${item.id}, '${item.nome}')">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('totalCategorias').textContent = items.length;
+        });
+}
+
+function cadastrarCategoria() {
+    const input = document.getElementById('inputCategoria');
+    const nome = input.value.trim();
+    
+    if (!nome) {
+        alert('Digite uma categoria!');
+        return;
+    }
+    
+    fetch('/api/categorias', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({nome: nome})
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            input.value = '';
+            carregarCategorias();
+        } else {
+            alert(result.message || 'Erro ao cadastrar');
+        }
+    });
+}
+
+function excluirCategoria(id, nome) {
+    if (confirm(`Deseja realmente excluir a categoria "${nome}"?`)) {
+        fetch(`/api/categorias/${id}`, {method: 'DELETE'})
+            .then(r => r.json())
+            .then(() => carregarCategorias());
+    }
+}
+
+// ========== OPERAÇÕES ==========
+function carregarOperacoes() {
+    fetch('/api/operacoes')
+        .then(r => r.json())
+        .then(items => {
+            const lista = document.getElementById('listaOperacoes');
+            if (items.length === 0) {
+                lista.innerHTML = '<div class="lista-vazia">Nenhuma operação cadastrada</div>';
+            } else {
+                lista.innerHTML = items.map(item => `
+                    <div class="item">
+                        <span class="item-nome">${item.nome}</span>
+                        <button class="btn-excluir" onclick="excluirOperacao(${item.id}, '${item.nome}')">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('totalOperacoes').textContent = items.length;
+        });
+}
+
+function cadastrarOperacao() {
+    const input = document.getElementById('inputOperacao');
+    const nome = input.value.trim();
+    
+    if (!nome) {
+        alert('Digite uma operação!');
+        return;
+    }
+    
+    fetch('/api/operacoes', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({nome: nome})
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            input.value = '';
+            carregarOperacoes();
+        } else {
+            alert(result.message || 'Erro ao cadastrar');
+        }
+    });
+}
+
+function excluirOperacao(id, nome) {
+    if (confirm(`Deseja realmente excluir a operação "${nome}"?`)) {
+        fetch(`/api/operacoes/${id}`, {method: 'DELETE'})
+            .then(r => r.json())
+            .then(() => carregarOperacoes());
+    }
+}
+
+// Listener global para ESC - fechar modal ou voltar para estoque
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        const modal = document.getElementById('modalMultiplos');
+        const modalPadrao = document.getElementById('modalPadrao');
+        if (modal && modal.classList.contains('active')) {
+            fecharModal();
+        } else if (modalPadrao && modalPadrao.classList.contains('active')) {
+            fecharModalPadrao();
+        } else {
+            window.location.href = '/estoque';
+        }
+    }
+}, true);
+
+// ========== PADRÃO ==========
+const PADRAO_ITEMS = {
+    'unidades': ['UN', 'KG', 'L', 'CX', 'M', 'M²', 'M³', 'PAR', 'DZ', 'PCT'],
+    'marcas': ['AMANCO', 'BRASILITE', 'CORAL/SUVINIL', 'ETERNIT', 'FIAT', 'FORD', 'GENERAL MOTORS', 'HONDA', 'HYUNDAI', 'IVECO', 'KOMATSU', 'MERCEDES-BENZ', 'MITSUBISHI', 'NISSAN', 'SCANIA', 'TOYOTA', 'VOLKSWAGEN', 'VOLVO'],
+    'categorias': ['CIVIL', 'ELÉTRICA', 'HIDRÁULICA', 'MECÂNICA', 'SERVIÇO'],
+    'operacoes': ['DEVOLUÇÃO', 'ENTRADA DE ESTOQUE', 'SAÍDA DE ESTOQUE']
+};
+
+let tipoAtualPadrao = '';
+
+function abrirPadrao(tipo) {
+    tipoAtualPadrao = tipo;
+    const titulos = {
+        'unidades': 'Padrão - Unidades',
+        'marcas': 'Padrão - Marcas',
+        'categorias': 'Padrão - Categorias',
+        'operacoes': 'Padrão - Operações'
+    };
+    
+    document.getElementById('modalPadraoTitulo').textContent = titulos[tipo];
+    document.getElementById('modalPadraoTextarea').value = PADRAO_ITEMS[tipo].join('\n');
+    document.getElementById('modalPadrao').classList.add('active');
+}
+
+function fecharModalPadrao() {
+    document.getElementById('modalPadrao').classList.remove('active');
+    tipoAtualPadrao = '';
+}
+
+function salvarPadrao() {
+    const textarea = document.getElementById('modalPadraoTextarea');
+    const linhas = textarea.value.split('\n').map(l => l.trim()).filter(l => l !== '');
+    
+    if (linhas.length === 0) {
+        alert('Digite pelo menos um item!');
+        return;
+    }
+    
+    // Atualizar o padrão local
+    PADRAO_ITEMS[tipoAtualPadrao] = linhas;
+    
+    alert('Padrão atualizado com sucesso!');
+    fecharModalPadrao();
+}
+
+function restaurarPadrao() {
+    if (!confirm('Deseja restaurar o padrão original?\n\nIsso vai LIMPAR todos os itens atuais e carregar o padrão.')) {
+        return;
+    }
+    
+    const endpoints = {
+        'unidades': '/api/unidades',
+        'marcas': '/api/marcas',
+        'categorias': '/api/categorias',
+        'operacoes': '/api/operacoes'
+    };
+    
+    const funcoes = {
+        'unidades': carregarUnidades,
+        'marcas': carregarMarcas,
+        'categorias': carregarCategorias,
+        'operacoes': carregarOperacoes
+    };
+    
+    // 1. Deletar todos os itens atuais
+    fetch(endpoints[tipoAtualPadrao])
+        .then(r => r.json())
+        .then(async items => {
+            for (const item of items) {
+                await fetch(`${endpoints[tipoAtualPadrao]}/${item.id}`, {method: 'DELETE'});
+            }
+            
+            // 2. Adicionar os itens padrão
+            for (const nome of PADRAO_ITEMS[tipoAtualPadrao]) {
+                await fetch(endpoints[tipoAtualPadrao], {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nome: nome})
+                });
+            }
+            
+            alert('Padrão restaurado com sucesso!');
+            funcoes[tipoAtualPadrao]();
+            fecharModalPadrao();
+        });
+}
+</script>
+{% endblock %}
+

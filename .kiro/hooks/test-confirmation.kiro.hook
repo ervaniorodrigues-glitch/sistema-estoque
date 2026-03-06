@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Confirmação de Teste",
+  "description": "Monitora quando o usuário acessa a aplicação para testar mudanças",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "O usuário está testando a aplicação. Pergunte como foi o teste, se funcionou corretamente, e se ele quer fazer mais ajustes ou enviar para o GitHub."
+  }
+}
