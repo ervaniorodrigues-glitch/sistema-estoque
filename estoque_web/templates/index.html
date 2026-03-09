@@ -2,77 +2,477 @@
 
 {% block title %}Dashboard - Sistema de Estoque{% endblock %}
 
+{% block extra_css %}
+<style>
+    .dashboard-container {
+        padding: 20px;
+        position: relative;
+    }
+    
+    /* Navegação de Slides */
+    .slides-nav {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .slide-tab {
+        padding: 12px 24px;
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        color: #7f8c8d;
+        transition: all 0.3s;
+    }
+    
+    .slide-tab:hover {
+        color: #2c3e50;
+        background: #f8f9fa;
+    }
+    
+    .slide-tab.active {
+        color: #3498db;
+        border-bottom-color: #3498db;
+    }
+    
+    /* Container de Slides */
+    .slides-container {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .slide {
+        display: none;
+        animation: fadeIn 0.5s;
+    }
+    
+    .slide.active {
+        display: block;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Cards de Estatísticas */
+    .stat-card {
+        text-align: center;
+        padding: 10px 8px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card h3 {
+        font-size: 22px;
+        font-weight: bold;
+        margin: 5px 0;
+        color: #2c3e50;
+    }
+    
+    .stat-card p {
+        color: #7f8c8d;
+        font-size: 10px;
+        margin: 0;
+    }
+    
+    .stat-icon {
+        font-size: 28px;
+        margin-bottom: 5px;
+    }
+    
+    /* Ranking */
+    .dashboard-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .ranking-filters {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .ranking-filters select {
+        padding: 6px 10px;
+        border: 1px solid #cbd5e0;
+        border-radius: 5px;
+        font-size: 11px;
+        min-width: 160px;
+        background: white;
+    }
+    
+    .total-gasto-label {
+        font-size: 10px;
+        color: #7f8c8d;
+        margin-bottom: 3px;
+        font-weight: 600;
+    }
+    
+    .total-gasto-value {
+        font-size: 20px;
+        font-weight: bold;
+        color: #27ae60;
+    }
+    
+    .ranking-bar {
+        display: flex;
+        align-items: center;
+        margin-bottom: 4px;
+        padding: 4px 6px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        transition: all 0.3s;
+    }
+    
+    .ranking-bar:hover {
+        background: #e9ecef;
+        transform: translateX(3px);
+    }
+    
+    .ranking-position {
+        font-weight: bold;
+        font-size: 13px;
+        width: 32px;
+        color: #2c3e50;
+    }
+    
+    .ranking-name {
+        flex: 0 0 150px;
+        font-weight: 600;
+        color: #34495e;
+        font-size: 11px;
+    }
+    
+    .ranking-bar-container {
+        flex: 1;
+        height: 20px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 0 8px;
+        position: relative;
+    }
+    
+    .ranking-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3498db, #2980b9);
+        transition: width 0.8s ease;
+        display: flex;
+        align-items: center;
+        padding-left: 6px;
+        color: white;
+        font-weight: bold;
+        font-size: 9px;
+    }
+    
+    .ranking-value {
+        font-weight: bold;
+        font-size: 11px;
+        color: #27ae60;
+        min-width: 160px;
+        text-align: right;
+    }
+    
+    .no-data {
+        text-align: center;
+        padding: 60px 20px;
+        color: #95a5a6;
+    }
+    
+    .no-data i {
+        font-size: 64px;
+        color: #bdc3c7;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
-        </div>
+<div class="dashboard-container">
+    <!-- Navegação de Slides -->
+    <div class="slides-nav">
+        <button class="slide-tab active" onclick="mudarSlide(0)">
+            📊 Estatísticas
+        </button>
+        <button class="slide-tab" onclick="mudarSlide(1)">
+            📈 Ranking de Fornecedores
+        </button>
+        <button class="slide-tab" onclick="mudarSlide(2)">
+            👷 Ranking de Funcionários
+        </button>
     </div>
 
-    <!-- Cards de Estatísticas -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card card-custom text-center">
-                <div class="card-body">
-                    <i class="bi bi-box display-4 text-primary"></i>
-                    <h3 class="mt-3" id="totalProdutos">0</h3>
-                    <p class="text-muted">Produtos Cadastrados</p>
-                </div>
-            </div>
-        </div>
+    <!-- Container de Slides -->
+    <div class="slides-container">
         
-        <div class="col-md-3">
-            <div class="card card-custom text-center">
-                <div class="card-body">
-                    <i class="bi bi-people display-4 text-success"></i>
-                    <h3 class="mt-3" id="totalFuncionarios">0</h3>
-                    <p class="text-muted">Funcionários Ativos</p>
+        <!-- SLIDE 1: Estatísticas -->
+        <div class="slide active" id="slide-0">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #3498db;">📦</div>
+                        <h3 id="totalProdutos">0</h3>
+                        <p>Produtos Cadastrados</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #27ae60;">👥</div>
+                        <h3 id="totalFuncionarios">0</h3>
+                        <p>Funcionários Ativos</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #f39c12;">🏢</div>
+                        <h3 id="totalFornecedores">0</h3>
+                        <p>Fornecedores</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #9b59b6;">👤</div>
+                        <h3 id="totalClientes">0</h3>
+                        <p>Clientes</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="card card-custom text-center">
-                <div class="card-body">
-                    <i class="bi bi-building display-4 text-warning"></i>
-                    <h3 class="mt-3" id="totalFornecedores">0</h3>
-                    <p class="text-muted">Fornecedores</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="card card-custom text-center">
-                <div class="card-body">
-                    <i class="bi bi-person-badge display-4 text-info"></i>
-                    <h3 class="mt-3" id="totalClientes">0</h3>
-                    <p class="text-muted">Clientes</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Bem-vindo -->
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card card-custom">
-                <div class="card-body text-center py-5">
-                    <i class="bi bi-box-seam display-1 text-primary mb-4"></i>
-                    <h3>Bem-vindo ao Sistema de Controle de Estoque</h3>
-                    <p class="text-muted">Utilize o menu lateral para acessar as funcionalidades do sistema</p>
+            <!-- Mensagem de Boas-vindas -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="dashboard-card text-center" style="padding: 60px;">
+                        <i class="fas fa-box-open" style="font-size: 80px; color: #3498db; margin-bottom: 20px;"></i>
+                        <h3 style="color: #2c3e50; margin-bottom: 15px;">Bem-vindo ao Sistema de Controle de Estoque</h3>
+                        <p style="color: #7f8c8d; font-size: 16px;">Utilize o menu superior para acessar as funcionalidades do sistema</p>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- SLIDE 2: Ranking de Fornecedores -->
+        <div class="slide" id="slide-1">
+            <!-- Cards de Indicadores do Ranking -->
+            <div class="row mb-3" style="gap: 8px; margin-left: 0; margin-right: 0;">
+                <div class="col" style="padding: 0 4px;">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #27ae60;">📦</div>
+                        <h3 id="totalPedidos">0</h3>
+                        <p>Total de Pedidos</p>
+                    </div>
+                </div>
+                
+                <div class="col" style="padding: 0 4px;">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #3498db;">📋</div>
+                        <h3 id="totalAtivo">0</h3>
+                        <p>Total de Ativo</p>
+                    </div>
+                </div>
+                
+                <div class="col" style="padding: 0 4px;">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #e74c3c;">🚫</div>
+                        <h3 id="totalCancelados">0</h3>
+                        <p>Total Cancelados</p>
+                    </div>
+                </div>
+                
+                <div class="col" style="padding: 0 4px;">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #f39c12;">↩️</div>
+                        <h3 id="totalDevolucoes">0</h3>
+                        <p>Total de Devoluções</p>
+                    </div>
+                </div>
+                
+                <div class="col" style="padding: 0 4px;">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #9b59b6;">🔄</div>
+                        <h3 id="totalEmprestimos">0</h3>
+                        <p>Total de Empréstimos</p>
+                    </div>
+                </div>
+                
+                <div class="col" style="padding: 0 4px;">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: #16a085;">💰</div>
+                        <h3 id="totalGastoCard">R$ 0,00</h3>
+                        <p>Total R$ GASTO</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="dashboard-card">
+                        <div class="ranking-filters">
+                            <div>
+                                <label style="font-size: 12px; color: #7f8c8d; display: block; margin-bottom: 5px; font-weight: 600;">Categoria:</label>
+                                <select id="filtroCategoria" onchange="carregarRanking()">
+                                    <option value="">Todas as Categorias</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label style="font-size: 12px; color: #7f8c8d; display: block; margin-bottom: 5px; font-weight: 600;">Ano:</label>
+                                <select id="filtroAno" onchange="carregarRanking()">
+                                    <option value="">Todos os Anos</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="rankingContainer">
+                            <div class="no-data">
+                                <i class="fas fa-chart-bar"></i>
+                                <p style="margin-top: 15px; font-size: 16px;">Carregando dados...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: Ranking de Funcionários -->
+        <div class="slide" id="slide-2">
+            <div class="row">
+                <!-- Coluna da esquerda: Cards verticais -->
+                <div class="col-md-2">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <div class="stat-icon" style="color: #e74c3c; font-size: 32px;">📤</div>
+                        <div>
+                            <h3 id="totalSaidas" style="font-size: 24px; margin: 0; font-weight: bold;">0</h3>
+                            <p style="font-size: 10px; color: #7f8c8d; margin: 0; white-space: nowrap;">Total de Saídas</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <div class="stat-icon" style="color: #f39c12; font-size: 32px;">👷</div>
+                        <div>
+                            <h3 id="totalFuncionariosAtivos" style="font-size: 24px; margin: 0; font-weight: bold;">0</h3>
+                            <p style="font-size: 10px; color: #7f8c8d; margin: 0; white-space: nowrap;">Funcionários Ativos</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <div class="stat-icon" style="color: #e67e22; font-size: 32px;">📦</div>
+                        <div>
+                            <h3 id="totalItensRetirados" style="font-size: 24px; margin: 0; font-weight: bold;">0</h3>
+                            <p style="font-size: 10px; color: #7f8c8d; margin: 0; white-space: nowrap;">Total Itens Retirados</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                        <div class="stat-icon" style="color: #9b59b6; font-size: 32px;">📊</div>
+                        <div>
+                            <h3 id="mediaRetiradas" style="font-size: 24px; margin: 0; font-weight: bold;">0</h3>
+                            <p style="font-size: 10px; color: #7f8c8d; margin: 0; white-space: nowrap;">Média por Funcionário</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Filtros embaixo dos cards -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-size: 10px; color: #7f8c8d; display: block; margin-bottom: 5px; font-weight: 600;">Categoria:</label>
+                        <select id="filtroCategoriaFunc" onchange="carregarRankingFuncionarios()" style="padding: 6px 10px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 11px; width: 100%; background: white;">
+                            <option value="">Todas as Categorias</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label style="font-size: 10px; color: #7f8c8d; display: block; margin-bottom: 5px; font-weight: 600;">Ano:</label>
+                        <select id="filtroAnoFunc" onchange="carregarRankingFuncionarios()" style="padding: 6px 10px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 11px; width: 100%; background: white;">
+                            <option value="">Todos os Anos</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Coluna da direita: Gráfico -->
+                <div class="col-md-10">
+                    <div class="dashboard-card" style="padding: 10px; height: 100%;">
+                        <div id="rankingFuncionariosContainer">
+                            <div class="no-data">
+                                <i class="fas fa-chart-bar"></i>
+                                <p style="margin-top: 15px; font-size: 16px;">Carregando dados...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// Controle de Slides
+let slideAtual = 0;
+
+function mudarSlide(index) {
+    // Remover active de todos
+    document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.slide-tab').forEach(t => t.classList.remove('active'));
+    
+    // Adicionar active no selecionado
+    document.getElementById(`slide-${index}`).classList.add('active');
+    document.querySelectorAll('.slide-tab')[index].classList.add('active');
+    
+    slideAtual = index;
+}
+
 $(document).ready(function() {
-    // Carregar estatísticas
+    console.log('Iniciando carregamento do dashboard...');
+    
     carregarEstatisticas();
+    carregarIndicadoresRanking();
+    carregarIndicadoresFuncionarios();
+    
+    // Carregar categorias e anos para ambos os rankings
+    carregarCategorias();
+    carregarAnos();
+    
+    // Carregar rankings automaticamente
+    carregarRanking();
+    carregarRankingFuncionarios();
+    
+    // Carregar categorias e anos para o ranking de funcionários
+    $.get('/api/categorias', function(data) {
+        const select = $('#filtroCategoriaFunc');
+        data.forEach(cat => {
+            select.append(`<option value="${cat.nome}">${cat.nome}</option>`);
+        });
+        console.log('Categorias carregadas para funcionários:', data.length);
+    });
+    
+    $.get('/api/anos', function(data) {
+        const select = $('#filtroAnoFunc');
+        data.forEach(ano => {
+            select.append(`<option value="${ano.ano}">${ano.ano}</option>`);
+        });
+        console.log('Anos carregados para funcionários:', data.length);
+    });
 });
 
 function carregarEstatisticas() {
@@ -95,6 +495,252 @@ function carregarEstatisticas() {
     $.get('/api/clientes?ativo=ativos', function(data) {
         $('#totalClientes').text(data.length);
     });
+}
+
+function carregarIndicadoresRanking() {
+    // Total de Pedidos (movimentações de entrada)
+    $.get('/api/movimentacoes', function(data) {
+        const pedidos = data.filter(m => m.tipo === 'ENTRADA');
+        $('#totalPedidos').text(pedidos.length);
+    });
+    
+    // Total de Ativo (produtos ativos)
+    $.get('/api/produtos?ativo=ativos', function(data) {
+        $('#totalAtivo').text(data.length);
+    });
+    
+    // Total Cancelados (produtos inativos/desativados)
+    $.get('/api/produtos?ativo=inativos', function(data) {
+        $('#totalCancelados').text(data.length);
+    });
+    
+    // Total de Devoluções (movimentações com operação DEVOLUÇÃO)
+    $.get('/api/movimentacoes', function(data) {
+        const devolucoes = data.filter(m => m.operacao && m.operacao.toUpperCase() === 'DEVOLUÇÃO');
+        $('#totalDevolucoes').text(devolucoes.length);
+    });
+    
+    // Total de Empréstimos (empréstimos ativos)
+    $.get('/api/emprestimos', function(data) {
+        const emprestimosAtivos = data.filter(e => e.status === 'EMPRESTADO');
+        $('#totalEmprestimos').text(emprestimosAtivos.length);
+    });
+    
+    // Total R$ GASTO será atualizado quando carregar o ranking
+}
+
+function carregarCategorias() {
+    $.get('/api/categorias', function(data) {
+        const select = $('#filtroCategoria');
+        data.forEach(cat => {
+            select.append(`<option value="${cat.nome}">${cat.nome}</option>`);
+        });
+    });
+}
+
+function carregarAnos() {
+    $.get('/api/anos', function(data) {
+        const select = $('#filtroAno');
+        data.forEach(ano => {
+            select.append(`<option value="${ano.ano}">${ano.ano}</option>`);
+        });
+    });
+}
+
+function carregarRanking() {
+    const categoria = $('#filtroCategoria').val();
+    const ano = $('#filtroAno').val();
+    
+    let url = '/api/ranking-fornecedores?';
+    if (categoria) url += `categoria=${encodeURIComponent(categoria)}&`;
+    if (ano) url += `ano=${ano}&`;
+    
+    console.log('Carregando ranking:', url);
+    
+    $.get(url, function(data) {
+        console.log('Dados recebidos:', data);
+        renderizarRanking(data);
+    }).fail(function(xhr, status, error) {
+        console.error('Erro ao carregar ranking:', error, xhr.responseText);
+        $('#rankingContainer').html(`
+            <div class="no-data">
+                <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
+                <p style="margin-top: 15px; font-size: 16px;">Erro ao carregar dados</p>
+                <p style="font-size: 12px; color: #7f8c8d;">${error}</p>
+            </div>
+        `);
+    });
+}
+
+function renderizarRanking(data) {
+    const container = $('#rankingContainer');
+    
+    console.log('Renderizando ranking com dados:', data);
+    
+    if (!data.ranking || data.ranking.length === 0) {
+        container.html(`
+            <div class="no-data">
+                <i class="fas fa-inbox"></i>
+                <p style="margin-top: 15px; font-size: 16px;">Nenhum dado encontrado para os filtros selecionados</p>
+            </div>
+        `);
+        $('#totalGastoCard').text('R$ 0,00');
+        return;
+    }
+    
+    // Atualizar total gasto no card superior
+    const totalFormatado = formatarMoeda(data.total_gasto);
+    console.log('Total formatado:', totalFormatado);
+    $('#totalGastoCard').text(totalFormatado);
+    
+    // Encontrar o valor máximo para calcular porcentagens
+    const maxValor = Math.max(...data.ranking.map(r => r.total));
+    
+    // Renderizar barras
+    let html = '';
+    data.ranking.forEach((item, index) => {
+        const porcentagem = (item.total / maxValor) * 100;
+        const cor = obterCor(index);
+        
+        html += `
+            <div class="ranking-bar">
+                <div class="ranking-position">${index + 1}º</div>
+                <div class="ranking-name">${item.fornecedor}</div>
+                <div class="ranking-bar-container">
+                    <div class="ranking-bar-fill" style="width: ${porcentagem}%; background: ${cor};">
+                        ${porcentagem.toFixed(1)}%
+                    </div>
+                </div>
+                <div class="ranking-value">${formatarMoeda(item.total)}</div>
+            </div>
+        `;
+    });
+    
+    container.html(html);
+}
+
+function obterCor(index) {
+    // 1º ao 3º: Verde
+    if (index >= 0 && index <= 2) {
+        return 'linear-gradient(90deg, #2ecc71, #27ae60)';
+    }
+    // 4º ao 6º: Amarelo
+    else if (index >= 3 && index <= 5) {
+        return 'linear-gradient(90deg, #f1c40f, #f39c12)';
+    }
+    // 7º ao 9º: Vermelho
+    else if (index >= 6 && index <= 8) {
+        return 'linear-gradient(90deg, #e74c3c, #c0392b)';
+    }
+    // 10º: Preto
+    else {
+        return 'linear-gradient(90deg, #34495e, #2c3e50)';
+    }
+}
+
+function formatarMoeda(valor) {
+    return 'R$ ' + parseFloat(valor).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// ========== RANKING DE FUNCIONÁRIOS ==========
+
+function carregarIndicadoresFuncionarios() {
+    // Total de Saídas
+    $.get('/api/movimentacoes', function(data) {
+        const saidas = data.filter(m => m.tipo === 'SAIDA');
+        $('#totalSaidas').text(saidas.length);
+    });
+    
+    // Funcionários Ativos
+    $.get('/api/funcionarios?ativo=ativos', function(data) {
+        $('#totalFuncionariosAtivos').text(data.length);
+    });
+}
+
+function carregarRankingFuncionarios() {
+    const categoria = $('#filtroCategoriaFunc').val();
+    const ano = $('#filtroAnoFunc').val();
+    
+    let url = '/api/ranking-funcionarios?';
+    if (categoria) url += `categoria=${encodeURIComponent(categoria)}&`;
+    if (ano) url += `ano=${ano}&`;
+    
+    console.log('Carregando ranking funcionários:', url);
+    
+    $.get(url, function(data) {
+        console.log('Dados recebidos funcionários:', data);
+        renderizarRankingFuncionarios(data);
+    }).fail(function(xhr, status, error) {
+        console.error('Erro ao carregar ranking funcionários:', error, xhr.responseText);
+        $('#rankingFuncionariosContainer').html(`
+            <div class="no-data">
+                <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
+                <p style="margin-top: 15px; font-size: 16px;">Erro ao carregar dados</p>
+                <p style="font-size: 12px; color: #7f8c8d;">${error}</p>
+            </div>
+        `);
+    });
+}
+
+function renderizarRankingFuncionarios(data) {
+    const container = $('#rankingFuncionariosContainer');
+    
+    console.log('=== Renderizando ranking funcionários ===');
+    console.log('Data completa:', data);
+    console.log('Ranking length:', data.ranking ? data.ranking.length : 0);
+    
+    if (!data.ranking || data.ranking.length === 0) {
+        container.html(`
+            <div class="no-data">
+                <i class="fas fa-inbox"></i>
+                <p style="margin-top: 15px; font-size: 16px;">Nenhum dado encontrado para os filtros selecionados</p>
+            </div>
+        `);
+        $('#totalItensRetirados').text('0');
+        $('#mediaRetiradas').text('0');
+        return;
+    }
+    
+    // Atualizar indicadores
+    console.log('Total quantidade:', data.total_quantidade);
+    console.log('Total retiradas:', data.total_retiradas);
+    
+    $('#totalItensRetirados').text(data.total_quantidade.toLocaleString('pt-BR'));
+    const media = data.ranking.length > 0 ? Math.round(data.total_retiradas / data.ranking.length) : 0;
+    $('#mediaRetiradas').text(media);
+    
+    // Encontrar o valor máximo para calcular porcentagens
+    const maxValor = Math.max(...data.ranking.map(r => r.total_retiradas));
+    console.log('Valor máximo:', maxValor);
+    
+    // Renderizar barras
+    let html = '';
+    data.ranking.forEach((item, index) => {
+        const porcentagem = (item.total_retiradas / maxValor) * 100;
+        const cor = obterCor(index);
+        
+        console.log(`${index + 1}º - ${item.funcionario}: ${item.total_retiradas} retiradas`);
+        
+        html += `
+            <div class="ranking-bar">
+                <div class="ranking-position">${index + 1}º</div>
+                <div class="ranking-name">${item.funcionario}</div>
+                <div class="ranking-bar-container">
+                    <div class="ranking-bar-fill" style="width: ${porcentagem}%; background: ${cor};">
+                        ${porcentagem.toFixed(1)}%
+                    </div>
+                </div>
+                <div class="ranking-value">${item.total_retiradas} retiradas</div>
+            </div>
+        `;
+    });
+    
+    console.log('HTML gerado, tamanho:', html.length);
+    container.html(html);
+    console.log('=== Renderização concluída ===');
 }
 </script>
 {% endblock %}

@@ -15,31 +15,36 @@
     /* Tabela responsiva */
     .tabela-movimentacoes {
         width: 100%;
-        table-layout: auto;
+        table-layout: fixed;
         font-size: 13px;
     }
     
     .tabela-movimentacoes th,
     .tabela-movimentacoes td {
-        white-space: nowrap;
-        padding: 4px 8px !important;
+        padding: 3px 8px !important;
+        vertical-align: middle;
+        height: 26px;
+        max-height: 26px;
+        overflow: hidden;
     }
     
     /* Colunas com largura mínima */
-    .col-data { min-width: 85px; }
-    .col-nf { min-width: 100px; }
-    .col-fornecedor { min-width: 180px; max-width: 220px; white-space: normal !important; }
-    .col-tipo { min-width: 90px; text-align: center; }
-    .col-operacao { min-width: 150px; max-width: 180px; white-space: normal !important; }
-    .col-es { min-width: 40px; text-align: center; }
-    .col-valor { min-width: 110px; text-align: right; }
-    .col-usuario { min-width: 110px; }
-    .col-observacao { min-width: 150px; max-width: 200px; white-space: normal !important; }
+    .col-data { width: 85px; white-space: nowrap; }
+    .col-nf { width: 100px; white-space: nowrap; }
+    .col-fornecedor { width: 300px; word-wrap: break-word; line-height: 1.2; }
+    .col-tipo { width: 90px; text-align: center; white-space: nowrap; }
+    .col-operacao { width: 150px; word-wrap: break-word; line-height: 1.2; }
+    .col-es { width: 40px; text-align: center; white-space: nowrap; }
+    .col-valor { width: 100px; text-align: right; white-space: nowrap; }
+    .col-usuario { width: 110px; white-space: nowrap; }
+    .col-observacao { width: 200px; word-wrap: break-word; line-height: 1.2; }
     
     /* Linha clicável */
     .linha-nota {
         cursor: pointer;
         transition: background-color 0.2s;
+        height: 26px;
+        max-height: 26px;
     }
     
     .linha-nota:hover {
@@ -52,35 +57,35 @@
         border-left: 4px solid #28a745 !important;
     }
 </style>
-<div class="container-movimentacoes" style="background-color: #f5f5f5;">
-    <div style="background-color: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <h2 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 18px;">
+<div class="container-movimentacoes" style="background-color: #f5f5f5; height: calc(100vh - 80px); overflow: hidden;">
+    <div style="background-color: white; border-radius: 8px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: 100%; display: flex; flex-direction: column;">
+        <h2 style="margin: 0 0 6px 0; color: #2c3e50; font-size: 15px; flex-shrink: 0;">
             <i class="fas fa-exchange-alt"></i> Relatório de Movimentações
         </h2>
         
         <!-- Filtros -->
-        <div style="background-color: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
-            <div style="display: flex; gap: 8px; align-items: end; flex-wrap: wrap;">
-                <div style="flex: 0 0 110px;">
-                    <label style="display: block; font-size: 11px; font-weight: bold; color: #2c3e50; margin-bottom: 3px;">Data Inicial:</label>
-                    <input type="text" id="dataInicial" class="form-control" placeholder="DD/MM/AAAA" style="font-size: 12px; width: 100%; padding: 4px;" maxlength="10">
+        <div style="background-color: #f8f9fa; padding: 6px; border-radius: 4px; margin-bottom: 6px; flex-shrink: 0;">
+            <div style="display: flex; gap: 5px; align-items: end; flex-wrap: wrap;">
+                <div style="flex: 0 0 95px;">
+                    <label style="display: block; font-size: 9px; font-weight: bold; color: #2c3e50; margin-bottom: 2px;">Data Inicial:</label>
+                    <input type="text" id="dataInicial" class="form-control" placeholder="DD/MM/AAAA" style="font-size: 10px; width: 100%; padding: 2px;" maxlength="10">
                 </div>
-                <div style="flex: 0 0 110px;">
-                    <label style="display: block; font-size: 11px; font-weight: bold; color: #2c3e50; margin-bottom: 3px;">Data Final:</label>
-                    <input type="text" id="dataFinal" class="form-control" placeholder="DD/MM/AAAA" style="font-size: 12px; width: 100%; padding: 4px;" maxlength="10">
+                <div style="flex: 0 0 95px;">
+                    <label style="display: block; font-size: 9px; font-weight: bold; color: #2c3e50; margin-bottom: 2px;">Data Final:</label>
+                    <input type="text" id="dataFinal" class="form-control" placeholder="DD/MM/AAAA" style="font-size: 10px; width: 100%; padding: 2px;" maxlength="10">
                 </div>
-                <div style="flex: 0 0 100px;">
-                    <label style="display: block; font-size: 11px; font-weight: bold; color: #2c3e50; margin-bottom: 3px;">Tipo:</label>
-                    <select id="filtroTipo" class="form-control" style="font-size: 12px; width: 100%; padding: 4px;">
+                <div style="flex: 0 0 85px;">
+                    <label style="display: block; font-size: 9px; font-weight: bold; color: #2c3e50; margin-bottom: 2px;">Tipo:</label>
+                    <select id="filtroTipo" class="form-control" style="font-size: 10px; width: 100%; padding: 2px;">
                         <option value="TODOS">TODOS</option>
                         <option value="ENTRADA">ENTRADA</option>
                         <option value="SAIDA">SAÍDA</option>
                         <option value="DEVOLUCAO">DEVOLUÇÃO</option>
                     </select>
                 </div>
-                <div style="flex: 0 0 100px;">
-                    <label style="display: block; font-size: 11px; font-weight: bold; color: #2c3e50; margin-bottom: 3px;">Mês:</label>
-                    <select id="filtroMes" class="form-control" style="font-size: 12px; width: 100%; padding: 4px;">
+                <div style="flex: 0 0 85px;">
+                    <label style="display: block; font-size: 9px; font-weight: bold; color: #2c3e50; margin-bottom: 2px;">Mês:</label>
+                    <select id="filtroMes" class="form-control" style="font-size: 10px; width: 100%; padding: 2px;">
                         <option value="TODOS">TODOS</option>
                         <option value="1">Janeiro</option>
                         <option value="2">Fevereiro</option>
@@ -96,39 +101,39 @@
                         <option value="12">Dezembro</option>
                     </select>
                 </div>
-                <div style="flex: 0 0 120px;">
-                    <label style="display: block; font-size: 11px; font-weight: bold; color: #2c3e50; margin-bottom: 3px;">Nota Fiscal:</label>
-                    <input type="text" id="filtroNota" class="form-control" placeholder="Número da nota" style="font-size: 12px; width: 100%; padding: 4px;">
+                <div style="flex: 0 0 105px;">
+                    <label style="display: block; font-size: 9px; font-weight: bold; color: #2c3e50; margin-bottom: 2px;">Nota Fiscal:</label>
+                    <input type="text" id="filtroNota" class="form-control" placeholder="Número da nota" style="font-size: 10px; width: 100%; padding: 2px;">
                 </div>
-                <div style="flex: 0 0 140px;">
-                    <label style="display: block; font-size: 11px; font-weight: bold; color: #2c3e50; margin-bottom: 3px;">Fornecedor/Cliente:</label>
-                    <input type="text" id="filtroSolicitante" class="form-control" placeholder="Nome" style="font-size: 12px; width: 100%; padding: 4px;">
+                <div style="flex: 0 0 125px;">
+                    <label style="display: block; font-size: 9px; font-weight: bold; color: #2c3e50; margin-bottom: 2px;">Fornecedor/Cliente:</label>
+                    <input type="text" id="filtroSolicitante" class="form-control" placeholder="Nome" style="font-size: 10px; width: 100%; padding: 2px;">
                 </div>
-                <div style="flex: 0 0 120px;">
-                    <label style="display: block; font-size: 11px; font-weight: bold; color: #2c3e50; margin-bottom: 3px;">Usuário:</label>
-                    <input type="text" id="filtroUsuario" class="form-control" placeholder="Nome" style="font-size: 12px; width: 100%; padding: 4px;">
+                <div style="flex: 0 0 105px;">
+                    <label style="display: block; font-size: 9px; font-weight: bold; color: #2c3e50; margin-bottom: 2px;">Usuário:</label>
+                    <input type="text" id="filtroUsuario" class="form-control" placeholder="Nome" style="font-size: 10px; width: 100%; padding: 2px;">
                 </div>
             </div>
             
             <!-- Botões -->
-            <div style="display: flex; gap: 8px; margin-top: 8px;">
-                <button onclick="exportarExcel()" style="background-color: #27ae60; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+            <div style="display: flex; gap: 5px; margin-top: 5px;">
+                <button onclick="exportarExcel()" style="background-color: #27ae60; color: white; border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 10px; font-weight: bold;">
                     <i class="fas fa-file-excel"></i> Excel
                 </button>
-                <button onclick="exportarPDF()" style="background-color: #e74c3c; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                <button onclick="exportarPDF()" style="background-color: #e74c3c; color: white; border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 10px; font-weight: bold;">
                     <i class="fas fa-file-pdf"></i> PDF
                 </button>
-                <button onclick="limparFiltros()" style="background-color: #95a5a6; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                <button onclick="limparFiltros()" style="background-color: #95a5a6; color: white; border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 10px; font-weight: bold;">
                     <i class="fas fa-broom"></i> Limpar
                 </button>
-                <button id="btnExcluir" onclick="excluirSelecionados()" style="background-color: #c0392b; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; display: none;">
+                <button id="btnExcluir" onclick="excluirSelecionados()" style="background-color: #c0392b; color: white; border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 10px; font-weight: bold; display: none;">
                     <i class="fas fa-trash"></i> Excluir Selecionados (<span id="contadorSelecionados">0</span>)
                 </button>
             </div>
         </div>
         
         <!-- Tabela com scroll vertical -->
-        <div style="max-height: 450px; overflow-y: auto; overflow-x: auto; border: 1px solid #ddd;">
+        <div style="flex: 1; overflow-y: auto; overflow-x: hidden; border: 1px solid #ddd; min-height: 0;">
             <table class="tabela-movimentacoes" style="border-collapse: collapse;">
                 <thead style="position: sticky; top: 0; z-index: 10; background-color: #34495e;">
                     <tr style="background-color: #34495e; color: white;">
@@ -154,19 +159,19 @@
         </div>
         
         <!-- Totais -->
-        <div style="margin-top: 10px; padding: 10px; background-color: #ecf0f1; border-radius: 6px;">
-            <table style="border-collapse: collapse; width: auto;">
-                <tr>
-                    <td style="font-weight: bold; color: #2c3e50; padding-right: 20px;">TOTAIS:</td>
-                    <td style="color: #27ae60; font-size: 14px; padding-right: 40px;">Entradas: <span id="totalEntradas">0</span></td>
-                    <td style="color: #e74c3c; font-size: 14px;">Saídas: <span id="totalSaidas">0</span></td>
-                </tr>
-                <tr>
-                    <td style="font-weight: bold; color: #2c3e50; padding-right: 20px;">VALORES:</td>
-                    <td style="color: #27ae60; font-size: 14px; padding-right: 40px;">Entradas: <span id="valorEntradas">R$ 0,00</span></td>
-                    <td style="color: #e74c3c; font-size: 14px;">Saídas: <span id="valorSaidas">R$ 0,00</span></td>
-                </tr>
-            </table>
+        <div style="margin-top: 5px; padding: 4px 8px; background-color: #ecf0f1; border-radius: 3px; flex-shrink: 0;">
+            <div style="display: flex; gap: 30px; font-size: 12px;">
+                <div>
+                    <span style="font-weight: bold; color: #2c3e50;">TOTAIS:</span>
+                    <span style="color: #27ae60; margin-left: 10px;">Entradas: <span id="totalEntradas">0</span></span>
+                    <span style="color: #e74c3c; margin-left: 15px;">Saídas: <span id="totalSaidas">0</span></span>
+                </div>
+                <div>
+                    <span style="font-weight: bold; color: #2c3e50;">VALORES:</span>
+                    <span style="color: #27ae60; margin-left: 10px;">Entradas: <span id="valorEntradas">R$ 0,00</span></span>
+                    <span style="color: #e74c3c; margin-left: 15px;">Saídas: <span id="valorSaidas">R$ 0,00</span></span>
+                </div>
+            </div>
         </div>
     </div>
 </div>

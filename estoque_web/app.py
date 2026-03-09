@@ -11,6 +11,13 @@ from datetime import datetime
 import os
 import unicodedata
 
+# Carregar variáveis de ambiente do arquivo .env (se existir)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv não instalado, usar apenas variáveis de ambiente do sistema
+
 # Função auxiliar para remover acentos
 def remover_acentos(texto):
     """Remove acentos de uma string para facilitar buscas"""
@@ -22,12 +29,26 @@ def remover_acentos(texto):
     return ''.join([c for c in nfkd if not unicodedata.combining(c)])
 
 app = Flask(__name__)
-app.secret_key = 'K8x#mP9$vL2@nQ5&wR7!jT4%yU6^bN3*cM1+dF0-eG8='
+app.secret_key = os.environ.get('SECRET_KEY', 'K8x#mP9$vL2@nQ5&wR7!jT4%yU6^bN3*cM1+dF0-eG8=')
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 # Configuração do SQLite com otimizações
 import os
-db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'estoque.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}?check_same_thread=False'
+
+# Configuração do banco de dados
+# Se DATABASE_URL estiver definida (PostgreSQL no Render), usa ela
+# Caso contrário, usa SQLite local
+database_url = os.environ.get('DATABASE_URL')
+
+if database_url:
+    # PostgreSQL no Render ou outro servidor
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # SQLite local para desenvolvimento
+    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'estoque.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}?check_same_thread=False'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {'timeout': 15},
@@ -41,7 +62,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 app.config['JSON_SORT_KEYS'] = False
 
 # Configuração de sessão
-app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = 86400
@@ -158,6 +179,7 @@ class Usuario(db.Model):
     usuario = db.Column(db.String(50), unique=True, nullable=False, index=True)
     senha = db.Column(db.String(200), nullable=False)
     admin = db.Column(db.Boolean, default=False)
+    tipo = db.Column(db.String(20), default='comum')  # comum, intermediario, master
     ativo = db.Column(db.Boolean, default=True, index=True)
     data_cadastro = db.Column(db.DateTime, default=datetime.now)
 
@@ -184,6 +206,12 @@ class Operacao(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False, unique=True)
+
+class Ano(db.Model):
+    __tablename__ = 'anos_div'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    ano = db.Column(db.Integer, nullable=False, unique=True)
 
 class Emprestimo(db.Model):
     __tablename__ = 'emprestimos'
@@ -218,27 +246,25 @@ def login():
             if not data or 'usuario' not in data or 'senha' not in data:
                 return jsonify({'success': False, 'message': 'Dados inválidos'})
             
-            usuario = Usuario.query.filter_by(usuario=data['usuario']).first()
+            # Buscar usuário ignorando maiúsculas/minúsculas
+            usuario = Usuario.query.filter(db.func.lower(Usuario.usuario) == db.func.lower(data['usuario'])).first()
             
             if not usuario:
-                print(f"[LOGIN] Usuário '{data['usuario']}' não encontrado")
                 return jsonify({'success': False, 'message': 'Usuário ou senha inválidos'})
             
             senha_correta = check_password_hash(usuario.senha, data['senha'])
-            print(f"[LOGIN] Usuário: {usuario.usuario}, Senha correta: {senha_correta}")
             
             if usuario and senha_correta:
                 session.permanent = True
                 session['usuario_id'] = usuario.id
                 session['usuario_nome'] = usuario.nome
                 session['usuario_admin'] = usuario.admin
-                print(f"[LOGIN] Sessão criada para {usuario.usuario}")
+                session['usuario_tipo'] = usuario.tipo if hasattr(usuario, 'tipo') else ('master' if usuario.admin else 'intermediario')
                 return jsonify({'success': True})
             
             return jsonify({'success': False, 'message': 'Usuário ou senha inválidos'})
         except Exception as e:
-            print(f"[LOGIN ERROR] {str(e)}")
-            return jsonify({'success': False, 'message': f'Erro: {str(e)}'})
+            return jsonify({'success': False, 'message': 'Erro ao processar login'})
     
     return render_template('login.html')
 
@@ -839,7 +865,7 @@ def api_clientes_listar():
     if busca:
         query = query.filter(
             (Cliente.nome.ilike(f'%{busca}%')) |
-            (Cliente.cpf_cnpj.ilike(f'%{busca}%'))
+            (Cliente.cpfcnpj.ilike(f'%{busca}%'))
         )
     
     if ativo == 'ativos':
@@ -1975,11 +2001,8 @@ def api_emprestimos_atualizar(id):
 @app.route('/api/emprestimos/<int:id>/prorrogar', methods=['PUT'])
 def api_emprestimos_prorrogar(id):
     """Prorrogar um empréstimo alterando a data de devolução prevista"""
-    print(f"[PRORROGAR] Chamado para ID {id}")
     emprestimo = Emprestimo.query.get_or_404(id)
     data = request.json
-    
-    print(f"[PRORROGAR] Dados recebidos: {data}")
     
     if 'data_devolucao_prevista' not in data:
         return jsonify({'success': False, 'message': 'Data de devolução prevista não informada'})
@@ -2528,25 +2551,18 @@ def api_categorias_criar():
     data = request.json
     nome = data['nome'].strip()
     
-    print(f"🔍 DEBUG: Tentando cadastrar categoria: '{nome}'")
-    
     # Buscar TODAS as categorias e comparar em Python (case-insensitive)
     todas = Categoria.query.all()
     for cat in todas:
         if cat.nome.lower() == nome.lower():
-            print(f"❌ DEBUG: Categoria '{nome}' JÁ EXISTE como '{cat.nome}'")
             return jsonify({'success': False, 'message': f'Esta categoria já existe como "{cat.nome}"!'})
-    
-    print(f"✅ DEBUG: Categoria '{nome}' não existe, cadastrando...")
     
     try:
         categoria = Categoria(nome=nome)
         db.session.add(categoria)
         db.session.commit()
-        print(f"✅ DEBUG: Categoria '{nome}' cadastrada com sucesso!")
         return jsonify({'success': True, 'id': categoria.id})
     except Exception as e:
-        print(f"❌ DEBUG: Erro ao cadastrar: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'message': 'Erro ao cadastrar categoria'})
 
@@ -2556,6 +2572,152 @@ def api_categorias_deletar(id):
     db.session.delete(categoria)
     db.session.commit()
     return jsonify({'success': True})
+
+# API para Ranking de Fornecedores
+@app.route('/api/ranking-fornecedores', methods=['GET'])
+def api_ranking_fornecedores():
+    """
+    Retorna ranking de fornecedores por gastos
+    Filtros: categoria, ano
+    """
+    try:
+        categoria = request.args.get('categoria', '')
+        ano = request.args.get('ano', '')
+        
+        # Query base: produtos com fornecedor
+        query = db.session.query(
+            Produto.fornecedor,
+            db.func.sum(Produto.preco_compra * Produto.estoque_atual).label('total_gasto')
+        ).filter(
+            Produto.fornecedor.isnot(None),
+            Produto.fornecedor != '',
+            Produto.ativo == True
+        )
+        
+        # Filtrar por categoria se especificado
+        if categoria:
+            query = query.filter(Produto.categoria == categoria)
+        
+        # Filtrar por ano se especificado (usando data_cadastro)
+        if ano:
+            from sqlalchemy import extract
+            query = query.filter(extract('year', Produto.data_cadastro) == int(ano))
+        
+        # Agrupar por fornecedor e ordenar por total gasto (decrescente)
+        ranking = query.group_by(Produto.fornecedor)\
+                      .order_by(db.desc('total_gasto'))\
+                      .limit(10)\
+                      .all()
+        
+        # Debug: imprimir resultados
+        print(f"DEBUG: Encontrados {len(ranking)} fornecedores")
+        for r in ranking:
+            print(f"  - {r.fornecedor}: R$ {r.total_gasto}")
+        
+        # Calcular total geral
+        total_gasto = sum([r.total_gasto if r.total_gasto else 0 for r in ranking])
+        print(f"DEBUG: Total gasto = R$ {total_gasto}")
+        
+        # Formatar resultado
+        resultado = {
+            'ranking': [
+                {
+                    'fornecedor': r.fornecedor,
+                    'total': float(r.total_gasto) if r.total_gasto else 0
+                }
+                for r in ranking
+            ],
+            'total_gasto': float(total_gasto) if total_gasto else 0
+        }
+        
+        return jsonify(resultado)
+        
+    except Exception as e:
+        import traceback
+        print(f"Erro no ranking: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'ranking': [],
+            'total_gasto': 0,
+            'error': str(e)
+        }), 500
+
+# API para Ranking de Funcionários
+@app.route('/api/ranking-funcionarios', methods=['GET'])
+def api_ranking_funcionarios():
+    """
+    Retorna ranking de funcionários por retiradas de material
+    Filtros: categoria, ano
+    """
+    try:
+        categoria = request.args.get('categoria', '')
+        ano = request.args.get('ano', '')
+        
+        # Query: movimentações de SAÍDA agrupadas por funcionário
+        query = db.session.query(
+            Movimentacao.solicitante_nome,
+            db.func.count(Movimentacao.id).label('total_retiradas'),
+            db.func.sum(Movimentacao.quantidade).label('total_quantidade')
+        ).filter(
+            Movimentacao.tipo == 'SAIDA',
+            Movimentacao.solicitante_tipo == 'FUNCIONARIO',
+            Movimentacao.solicitante_nome.isnot(None),
+            Movimentacao.solicitante_nome != ''
+        )
+        
+        # Filtrar por categoria se especificado (via produto)
+        if categoria:
+            query = query.join(Produto, Movimentacao.produto_codigo == Produto.codigo)\
+                        .filter(Produto.categoria == categoria)
+        
+        # Filtrar por ano se especificado
+        if ano:
+            from sqlalchemy import extract
+            query = query.filter(extract('year', Movimentacao.data_movimentacao) == int(ano))
+        
+        # Agrupar por funcionário e ordenar por total de retiradas (decrescente)
+        ranking = query.group_by(Movimentacao.solicitante_nome)\
+                      .order_by(db.desc('total_retiradas'))\
+                      .limit(10)\
+                      .all()
+        
+        # Debug
+        print(f"DEBUG Funcionários: Encontrados {len(ranking)} funcionários")
+        for r in ranking:
+            print(f"  - {r.solicitante_nome}: {r.total_retiradas} retiradas ({r.total_quantidade} itens)")
+        
+        # Calcular totais
+        total_retiradas = sum([r.total_retiradas if r.total_retiradas else 0 for r in ranking])
+        total_quantidade = sum([r.total_quantidade if r.total_quantidade else 0 for r in ranking])
+        
+        print(f"DEBUG: Total retiradas = {total_retiradas}, Total quantidade = {total_quantidade}")
+        
+        # Formatar resultado
+        resultado = {
+            'ranking': [
+                {
+                    'funcionario': r.solicitante_nome,
+                    'total_retiradas': int(r.total_retiradas) if r.total_retiradas else 0,
+                    'total_quantidade': int(r.total_quantidade) if r.total_quantidade else 0
+                }
+                for r in ranking
+            ],
+            'total_retiradas': int(total_retiradas) if total_retiradas else 0,
+            'total_quantidade': int(total_quantidade) if total_quantidade else 0
+        }
+        
+        return jsonify(resultado)
+        
+    except Exception as e:
+        import traceback
+        print(f"Erro no ranking de funcionários: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'ranking': [],
+            'total_retiradas': 0,
+            'total_quantidade': 0,
+            'error': str(e)
+        }), 500
 
 # APIs para Operações
 @app.route('/api/operacoes', methods=['GET'])
@@ -2587,6 +2749,38 @@ def api_operacoes_criar():
 def api_operacoes_deletar(id):
     operacao = Operacao.query.get_or_404(id)
     db.session.delete(operacao)
+    db.session.commit()
+    return jsonify({'success': True})
+
+# APIs para Anos
+@app.route('/api/anos', methods=['GET'])
+def api_anos_listar():
+    anos = Ano.query.order_by(Ano.ano.desc()).all()
+    return jsonify([{'id': a.id, 'ano': a.ano} for a in anos])
+
+@app.route('/api/anos', methods=['POST'])
+def api_anos_criar():
+    data = request.json
+    ano = int(data['ano'])
+    
+    # Verificar se o ano já existe
+    existe = Ano.query.filter_by(ano=ano).first()
+    if existe:
+        return jsonify({'success': False, 'message': f'O ano {ano} já está cadastrado!'})
+    
+    try:
+        novo_ano = Ano(ano=ano)
+        db.session.add(novo_ano)
+        db.session.commit()
+        return jsonify({'success': True, 'id': novo_ano.id})
+    except:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Erro ao cadastrar ano'})
+
+@app.route('/api/anos/<int:id>', methods=['DELETE'])
+def api_anos_deletar(id):
+    ano = Ano.query.get_or_404(id)
+    db.session.delete(ano)
     db.session.commit()
     return jsonify({'success': True})
 
@@ -3309,6 +3503,11 @@ class ConfiguracaoSistema(db.Model):
 def sistema():
     if 'usuario_id' not in session:
         return redirect(url_for('login'))
+    
+    # Bloquear acesso para usuários intermediários
+    if session.get('usuario_tipo') == 'intermediario':
+        return redirect(url_for('index'))
+    
     # Desabilitar cache
     response = make_response(render_template('sistema_novo.html'))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -3354,30 +3553,23 @@ def get_configuracoes_relatorios():
 @app.route('/api/configuracoes/relatorios', methods=['POST'])
 def save_configuracoes_relatorios():
     try:
-        print("=== SALVANDO CONFIGURAÇÕES ===")
         nome_empresa = request.form.get('nome_empresa', '').strip()
         rodape = request.form.get('rodape', '').strip()
-        print(f"Nome Empresa: {nome_empresa}")
-        print(f"Rodapé: {rodape}")
         
         config = ConfiguracaoSistema.query.first()
-        print(f"Config existente: {config}")
         
         if not config:
-            print("Criando nova configuração...")
             config = ConfiguracaoSistema()
             db.session.add(config)
         
         config.nome_empresa = nome_empresa
         config.rodape = rodape
         config.data_atualizacao = datetime.now()
-        print("Dados atribuídos ao objeto")
         
         # Upload do logo
         if 'logo' in request.files:
             logo_file = request.files['logo']
             if logo_file and logo_file.filename:
-                print(f"Logo recebido: {logo_file.filename}")
                 # Criar pasta se não existir
                 logos_dir = os.path.join(app.static_folder, 'logos')
                 os.makedirs(logos_dir, exist_ok=True)
@@ -4170,6 +4362,139 @@ def api_backup_deletar():
         return jsonify({'success': True, 'message': 'Backup deletado com sucesso'})
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao deletar backup: {str(e)}'})
+
+# ==================== GERENCIAMENTO DE USUÁRIOS ====================
+
+@app.route('/usuarios')
+def usuarios():
+    """Página de gerenciamento de usuários"""
+    if not session.get('usuario_admin'):
+        return redirect(url_for('index'))
+    return render_template('usuarios.html')
+
+@app.route('/api/usuarios/listar', methods=['GET'])
+def api_usuarios_listar():
+    """Listar todos os usuários"""
+    try:
+        if not session.get('usuario_admin'):
+            return jsonify({'success': False, 'message': 'Acesso negado'})
+        
+        usuarios = Usuario.query.all()
+        lista = [{
+            'id': u.id,
+            'usuario': u.usuario,
+            'nome': u.nome,
+            'admin': u.admin,
+            'tipo': u.tipo if hasattr(u, 'tipo') else ('master' if u.admin else 'comum'),
+            'ativo': u.ativo
+        } for u in usuarios]
+        
+        return jsonify(lista)
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/usuarios/criar', methods=['POST'])
+def api_usuarios_criar():
+    """Criar novo usuário"""
+    try:
+        if not session.get('usuario_admin'):
+            return jsonify({'success': False, 'message': 'Acesso negado'})
+        
+        dados = request.json
+        usuario = dados.get('usuario')
+        senha = dados.get('senha')
+        nome = dados.get('nome')
+        tipo = dados.get('tipo', 'comum')  # comum, intermediario, master
+        admin = tipo == 'master'  # Master é admin
+        
+        if not usuario or not senha or not nome:
+            return jsonify({'success': False, 'message': 'Preencha todos os campos'})
+        
+        # Verificar se já existe
+        existe = Usuario.query.filter_by(usuario=usuario).first()
+        if existe:
+            return jsonify({'success': False, 'message': 'Login já existe'})
+        
+        # Criar novo usuário
+        novo_usuario = Usuario(
+            usuario=usuario,
+            senha=generate_password_hash(senha),
+            nome=nome,
+            admin=admin,
+            tipo=tipo,
+            ativo=True
+        )
+        
+        db.session.add(novo_usuario)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Usuário criado com sucesso'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/usuarios/<int:id>/desativar', methods=['POST'])
+def api_usuarios_desativar(id):
+    """Desativar usuário"""
+    try:
+        if not session.get('usuario_admin'):
+            return jsonify({'success': False, 'message': 'Acesso negado'})
+        
+        usuario = Usuario.query.get(id)
+        if not usuario:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'})
+        
+        if usuario.usuario == 'master':
+            return jsonify({'success': False, 'message': 'Não é possível desativar o usuário master'})
+        
+        usuario.ativo = False
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Usuário desativado'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/usuarios/<int:id>/ativar', methods=['POST'])
+def api_usuarios_ativar(id):
+    """Ativar usuário"""
+    try:
+        if not session.get('usuario_admin'):
+            return jsonify({'success': False, 'message': 'Acesso negado'})
+        
+        usuario = Usuario.query.get(id)
+        if not usuario:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'})
+        
+        usuario.ativo = True
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Usuário ativado'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/usuarios/<int:id>/excluir', methods=['DELETE'])
+def api_usuarios_excluir(id):
+    """Excluir usuário"""
+    try:
+        if not session.get('usuario_admin'):
+            return jsonify({'success': False, 'message': 'Acesso negado'})
+        
+        usuario = Usuario.query.get(id)
+        if not usuario:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'})
+        
+        if usuario.usuario == 'master':
+            return jsonify({'success': False, 'message': 'Não é possível excluir o usuário master'})
+        
+        db.session.delete(usuario)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Usuário excluído'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
 
 # ==================== APPLICATION STARTUP ====================
 

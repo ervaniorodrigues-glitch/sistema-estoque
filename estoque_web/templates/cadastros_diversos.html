@@ -460,6 +460,39 @@
                 <div class="lista-vazia">Nenhuma operação cadastrada</div>
             </div>
         </div>
+
+        <!-- ANOS -->
+        <div class="cadastro-card" style="grid-row: span 5;">
+            <div class="cadastro-header">
+                <div>
+                    <span class="icon">📅</span>
+                    <span>Anos</span>
+                </div>
+                <div class="header-buttons">
+                    <button class="btn-header" onclick="abrirPadrao('anos')" title="Ver padrão">
+                        <i class="fas fa-star"></i> Padrão
+                    </button>
+                    <button class="btn-header" onclick="abrirModalMultiplos('anos')" title="Adicionar múltiplos">
+                        <i class="fas fa-list"></i> Múltiplos
+                    </button>
+                    <button class="btn-header btn-danger" onclick="limparTudo('anos')" title="Limpar tudo">
+                        <i class="fas fa-trash-alt"></i> Limpar
+                    </button>
+                    <span class="total-badge" id="totalAnos">0</span>
+                </div>
+            </div>
+            <div class="input-section">
+                <div class="input-group">
+                    <input type="number" id="inputAno" placeholder="Digite o ano (ex: 2024)..." onkeypress="if(event.key==='Enter') cadastrarAno()" min="1900" max="2100">
+                    <button class="btn-cadastrar" onclick="cadastrarAno()">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </div>
+            </div>
+            <div class="lista-items" id="listaAnos">
+                <div class="lista-vazia">Nenhum ano cadastrado</div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -517,6 +550,7 @@ function carregarTodos() {
     carregarMarcas();
     carregarCategorias();
     carregarOperacoes();
+    carregarAnos();
 }
 
 // ========== MODAL MÚLTIPLOS ==========
@@ -526,11 +560,20 @@ function abrirModalMultiplos(tipo) {
         'unidades': 'Adicionar Múltiplas Unidades',
         'marcas': 'Adicionar Múltiplas Marcas',
         'categorias': 'Adicionar Múltiplas Categorias',
-        'operacoes': 'Adicionar Múltiplas Operações'
+        'operacoes': 'Adicionar Múltiplas Operações',
+        'anos': 'Adicionar Múltiplos Anos'
     };
     
     document.getElementById('modalTitulo').textContent = titulos[tipo];
     document.getElementById('modalTextarea').value = '';
+    
+    // Placeholder específico para anos
+    if (tipo === 'anos') {
+        document.getElementById('modalTextarea').placeholder = 'Digite um ano por linha (ex: 2024, 2023, 2022...)';
+    } else {
+        document.getElementById('modalTextarea').placeholder = 'Digite um item por linha...';
+    }
+    
     document.getElementById('modalMultiplos').classList.add('active');
     document.getElementById('modalTextarea').focus();
 }
@@ -553,14 +596,16 @@ async function salvarMultiplos() {
         'unidades': '/api/unidades',
         'marcas': '/api/marcas',
         'categorias': '/api/categorias',
-        'operacoes': '/api/operacoes'
+        'operacoes': '/api/operacoes',
+        'anos': '/api/anos'
     };
     
     const funcoes = {
         'unidades': carregarUnidades,
         'marcas': carregarMarcas,
         'categorias': carregarCategorias,
-        'operacoes': carregarOperacoes
+        'operacoes': carregarOperacoes,
+        'anos': carregarAnos
     };
     
     let sucesso = 0;
@@ -568,10 +613,22 @@ async function salvarMultiplos() {
     
     for (const linha of linhas) {
         try {
+            let body;
+            if (tipoAtual === 'anos') {
+                const ano = parseInt(linha);
+                if (isNaN(ano) || ano < 1900 || ano > 2100) {
+                    erros++;
+                    continue;
+                }
+                body = JSON.stringify({ano: ano});
+            } else {
+                body = JSON.stringify({nome: linha});
+            }
+            
             const response = await fetch(endpoints[tipoAtual], {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({nome: linha})
+                body: body
             });
             
             const result = await response.json();
@@ -597,7 +654,8 @@ function limparTudo(tipo) {
         'unidades': 'unidades',
         'marcas': 'marcas',
         'categorias': 'categorias',
-        'operacoes': 'operações'
+        'operacoes': 'operações',
+        'anos': 'anos'
     };
     
     if (!confirm(`Deseja realmente EXCLUIR TODAS as ${nomes[tipo]}?\n\nEsta ação não pode ser desfeita!`)) {
@@ -608,14 +666,16 @@ function limparTudo(tipo) {
         'unidades': '/api/unidades',
         'marcas': '/api/marcas',
         'categorias': '/api/categorias',
-        'operacoes': '/api/operacoes'
+        'operacoes': '/api/operacoes',
+        'anos': '/api/anos'
     };
     
     const funcoes = {
         'unidades': carregarUnidades,
         'marcas': carregarMarcas,
         'categorias': carregarCategorias,
-        'operacoes': carregarOperacoes
+        'operacoes': carregarOperacoes,
+        'anos': carregarAnos
     };
     
     // Buscar todos os itens e excluir
@@ -850,6 +910,66 @@ function excluirOperacao(id, nome) {
     }
 }
 
+// ========== ANOS ==========
+function carregarAnos() {
+    fetch('/api/anos')
+        .then(r => r.json())
+        .then(items => {
+            const lista = document.getElementById('listaAnos');
+            if (items.length === 0) {
+                lista.innerHTML = '<div class="lista-vazia">Nenhum ano cadastrado</div>';
+            } else {
+                lista.innerHTML = items.map(item => `
+                    <div class="item">
+                        <span class="item-nome">${item.ano}</span>
+                        <button class="btn-excluir" onclick="excluirAno(${item.id}, ${item.ano})">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('totalAnos').textContent = items.length;
+        });
+}
+
+function cadastrarAno() {
+    const input = document.getElementById('inputAno');
+    const ano = input.value.trim();
+    
+    if (!ano) {
+        alert('Digite um ano!');
+        return;
+    }
+    
+    if (ano < 1900 || ano > 2100) {
+        alert('Digite um ano válido entre 1900 e 2100!');
+        return;
+    }
+    
+    fetch('/api/anos', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ano: ano})
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            input.value = '';
+            carregarAnos();
+        } else {
+            alert(result.message || 'Erro ao cadastrar');
+        }
+    });
+}
+
+function excluirAno(id, ano) {
+    if (confirm(`Deseja realmente excluir o ano "${ano}"?`)) {
+        fetch(`/api/anos/${id}`, {method: 'DELETE'})
+            .then(r => r.json())
+            .then(() => carregarAnos());
+    }
+}
+
 // Listener global para ESC - fechar modal ou voltar para estoque
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
@@ -872,7 +992,8 @@ const PADRAO_ITEMS = {
     'unidades': ['UN', 'KG', 'L', 'CX', 'M', 'M²', 'M³', 'PAR', 'DZ', 'PCT'],
     'marcas': ['AMANCO', 'BRASILITE', 'CORAL/SUVINIL', 'ETERNIT', 'FIAT', 'FORD', 'GENERAL MOTORS', 'HONDA', 'HYUNDAI', 'IVECO', 'KOMATSU', 'MERCEDES-BENZ', 'MITSUBISHI', 'NISSAN', 'SCANIA', 'TOYOTA', 'VOLKSWAGEN', 'VOLVO'],
     'categorias': ['CIVIL', 'ELÉTRICA', 'HIDRÁULICA', 'MECÂNICA', 'SERVIÇO'],
-    'operacoes': ['DEVOLUÇÃO', 'ENTRADA DE ESTOQUE', 'SAÍDA DE ESTOQUE']
+    'operacoes': ['DEVOLUÇÃO', 'ENTRADA DE ESTOQUE', 'SAÍDA DE ESTOQUE'],
+    'anos': ['2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015']
 };
 
 let tipoAtualPadrao = '';
@@ -883,7 +1004,8 @@ function abrirPadrao(tipo) {
         'unidades': 'Padrão - Unidades',
         'marcas': 'Padrão - Marcas',
         'categorias': 'Padrão - Categorias',
-        'operacoes': 'Padrão - Operações'
+        'operacoes': 'Padrão - Operações',
+        'anos': 'Padrão - Anos'
     };
     
     document.getElementById('modalPadraoTitulo').textContent = titulos[tipo];
@@ -921,14 +1043,16 @@ function restaurarPadrao() {
         'unidades': '/api/unidades',
         'marcas': '/api/marcas',
         'categorias': '/api/categorias',
-        'operacoes': '/api/operacoes'
+        'operacoes': '/api/operacoes',
+        'anos': '/api/anos'
     };
     
     const funcoes = {
         'unidades': carregarUnidades,
         'marcas': carregarMarcas,
         'categorias': carregarCategorias,
-        'operacoes': carregarOperacoes
+        'operacoes': carregarOperacoes,
+        'anos': carregarAnos
     };
     
     // 1. Deletar todos os itens atuais
@@ -940,11 +1064,18 @@ function restaurarPadrao() {
             }
             
             // 2. Adicionar os itens padrão
-            for (const nome of PADRAO_ITEMS[tipoAtualPadrao]) {
+            for (const item of PADRAO_ITEMS[tipoAtualPadrao]) {
+                let body;
+                if (tipoAtualPadrao === 'anos') {
+                    body = JSON.stringify({ano: parseInt(item)});
+                } else {
+                    body = JSON.stringify({nome: item});
+                }
+                
                 await fetch(endpoints[tipoAtualPadrao], {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({nome: nome})
+                    body: body
                 });
             }
             

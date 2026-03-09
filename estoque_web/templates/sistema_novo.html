@@ -107,9 +107,6 @@
                 <li><a href="#" onclick="cadastroUsuarios(); return false;">
                     <i class="fas fa-user-plus"></i> Cadastro de Usuários
                 </a></li>
-                <li><a href="#" onclick="abrirAutorizacaoSenhas(); return false;">
-                    <i class="fas fa-key"></i> Autorização de Senhas
-                </a></li>
             </ul>
         </div>
         
@@ -262,11 +259,7 @@ function abrirConfiguracoes() {
 }
 
 function cadastroUsuarios() {
-    alert('👤 Cadastro de Usuários\n\nEm desenvolvimento...');
-}
-
-function abrirAutorizacaoSenhas() {
-    alert('🔐 Autorização de Senhas\n\nEm desenvolvimento...');
+    window.location.href = '/usuarios';
 }
 
 function zerarTudo() {
