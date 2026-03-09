@@ -24,13 +24,12 @@ wheels/
 *.egg
 
 # Flask
-instance/
 .webassets-cache
 
-# Database
-*.db
+# Database - Permitir instance/estoque.db para deploy
 *.db-shm
 *.db-wal
+!estoque_web/instance/estoque.db
 
 # Environment variables
 .env

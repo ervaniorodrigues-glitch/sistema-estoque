@@ -1,0 +1,2 @@
+-- Migração de dados SQLite para PostgreSQL
+-- Gerado em: 2026-03-09 15:11:54

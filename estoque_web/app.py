@@ -37,28 +37,18 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 import os
 
 # Configuração do banco de dados
-# Se DATABASE_URL estiver definida (PostgreSQL no Render), usa ela
-# Caso contrário, usa SQLite local
-database_url = os.environ.get('DATABASE_URL')
+# Configuração do banco de dados - SEMPRE SQLite
+# Usar SQLite tanto em desenvolvimento quanto em produção
+db_path = os.path.join(os.path.dirname(__file__), 'instance', 'estoque.db')
+os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-if database_url:
-    # PostgreSQL no Render ou outro servidor
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_pre_ping': True,
-        'pool_recycle': 3600,
-    }
-else:
-    # SQLite local para desenvolvimento
-    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'estoque.db')
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}?check_same_thread=False'
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'connect_args': {'timeout': 15},
-        'pool_pre_ping': True,
-        'pool_recycle': 3600,
-    }
-
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}?check_same_thread=False'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'timeout': 15},
+    'pool_pre_ping': True,
+    'pool_recycle': 3600,
+}
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'static/uploads/produtos')
 
 # Criar pasta se não existir
