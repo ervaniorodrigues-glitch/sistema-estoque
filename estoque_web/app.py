@@ -230,6 +230,33 @@ class Emprestimo(db.Model):
     data_devolucao = db.Column(db.String(20))
     data_cadastro = db.Column(db.DateTime, default=datetime.now)
 
+# ==================== INICIALIZAÇÃO AUTOMÁTICA ====================
+# Executar inicialização automática do banco
+try:
+    with app.app_context():
+        # Criar todas as tabelas se não existirem
+        db.create_all()
+        
+        # Criar usuário master se não existir
+        master = Usuario.query.filter_by(usuario='master').first()
+        if not master:
+            from werkzeug.security import generate_password_hash
+            senha_master = os.environ.get('MASTER_PASSWORD', '@Senha01')
+            master = Usuario(
+                usuario='master',
+                senha=generate_password_hash(senha_master),
+                nome='Administrador Master',
+                admin=True,
+                tipo='master',
+                ativo=True
+            )
+            db.session.add(master)
+            db.session.commit()
+            print("✅ Usuário master criado automaticamente!")
+            print(f"   Usuário: master | Senha: {senha_master}")
+except Exception as e:
+    print(f"⚠️  Aviso na inicialização: {e}")
+
 # ==================== ROTAS ====================
 
 @app.route('/')
