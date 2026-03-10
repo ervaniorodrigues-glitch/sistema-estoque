@@ -4465,6 +4465,22 @@ def api_usuarios_excluir(id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        
+        # Criar usuário master se não existir
+        master = Usuario.query.filter_by(usuario='master').first()
+        if not master:
+            master = Usuario(
+                nome='Administrador Master',
+                usuario='master',
+                senha=generate_password_hash('@Senha01'),
+                admin=True,
+                tipo='admin',
+                ativo=True
+            )
+            db.session.add(master)
+            db.session.commit()
+            print("✅ Usuário master criado!")
+        
         criar_diretorios_backup()
         optimize_sqlite_once()  # Otimizar SQLite na inicialização
     app.run(debug=False, host='127.0.0.1', port=5000, threaded=True)
