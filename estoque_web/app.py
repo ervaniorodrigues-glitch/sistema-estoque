@@ -37,12 +37,18 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 import os
 
 # Configuração do banco de dados
-# Configuração do banco de dados - SEMPRE SQLite
-# Usar SQLite tanto em desenvolvimento quanto em produção
-db_path = os.path.join(os.path.dirname(__file__), 'instance', 'estoque.db')
-os.makedirs(os.path.dirname(db_path), exist_ok=True)
+# Se DATABASE_URL estiver definida (PostgreSQL no Render), usa ela
+# Caso contrário, usa SQLite local
+database_url = os.environ.get('DATABASE_URL')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}?check_same_thread=False'
+if database_url:
+    # PostgreSQL no Render ou outro servidor
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # SQLite local para desenvolvimento
+    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'estoque.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}?check_same_thread=False'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {'timeout': 15},
@@ -223,33 +229,6 @@ class Emprestimo(db.Model):
     data_devolucao_prevista = db.Column(db.String(20))
     data_devolucao = db.Column(db.String(20))
     data_cadastro = db.Column(db.DateTime, default=datetime.now)
-
-# ==================== INICIALIZAÇÃO AUTOMÁTICA ====================
-# Executar inicialização automática do banco
-try:
-    with app.app_context():
-        # Criar todas as tabelas se não existirem
-        db.create_all()
-        
-        # Criar usuário master se não existir
-        master = Usuario.query.filter_by(usuario='master').first()
-        if not master:
-            from werkzeug.security import generate_password_hash
-            senha_master = os.environ.get('MASTER_PASSWORD', '@Senha01')
-            master = Usuario(
-                usuario='master',
-                senha=generate_password_hash(senha_master),
-                nome='Administrador Master',
-                admin=True,
-                tipo='master',
-                ativo=True
-            )
-            db.session.add(master)
-            db.session.commit()
-            print("✅ Usuário master criado automaticamente!")
-            print(f"   Usuário: master | Senha: {senha_master}")
-except Exception as e:
-    print(f"⚠️  Aviso na inicialização: {e}")
 
 # ==================== ROTAS ====================
 
@@ -2660,83 +2639,6 @@ def api_ranking_fornecedores():
         return jsonify({
             'ranking': [],
             'total_gasto': 0,
-            'error': str(e)
-        }), 500
-
-# API para Ranking de Funcionários
-@app.route('/api/ranking-funcionarios', methods=['GET'])
-def api_ranking_funcionarios():
-    """
-    Retorna ranking de funcionários por retiradas de material
-    Filtros: categoria, ano
-    """
-    try:
-        categoria = request.args.get('categoria', '')
-        ano = request.args.get('ano', '')
-        
-        # Query: movimentações de SAÍDA agrupadas por funcionário
-        query = db.session.query(
-            Movimentacao.solicitante_nome,
-            db.func.count(Movimentacao.id).label('total_retiradas'),
-            db.func.sum(Movimentacao.quantidade).label('total_quantidade')
-        ).filter(
-            Movimentacao.tipo == 'SAIDA',
-            Movimentacao.solicitante_tipo == 'FUNCIONARIO',
-            Movimentacao.solicitante_nome.isnot(None),
-            Movimentacao.solicitante_nome != ''
-        )
-        
-        # Filtrar por categoria se especificado (via produto)
-        if categoria:
-            query = query.join(Produto, Movimentacao.produto_codigo == Produto.codigo)\
-                        .filter(Produto.categoria == categoria)
-        
-        # Filtrar por ano se especificado
-        if ano:
-            from sqlalchemy import extract
-            query = query.filter(extract('year', Movimentacao.data_movimentacao) == int(ano))
-        
-        # Agrupar por funcionário e ordenar por total de retiradas (decrescente)
-        ranking = query.group_by(Movimentacao.solicitante_nome)\
-                      .order_by(db.desc('total_retiradas'))\
-                      .limit(10)\
-                      .all()
-        
-        # Debug
-        print(f"DEBUG Funcionários: Encontrados {len(ranking)} funcionários")
-        for r in ranking:
-            print(f"  - {r.solicitante_nome}: {r.total_retiradas} retiradas ({r.total_quantidade} itens)")
-        
-        # Calcular totais
-        total_retiradas = sum([r.total_retiradas if r.total_retiradas else 0 for r in ranking])
-        total_quantidade = sum([r.total_quantidade if r.total_quantidade else 0 for r in ranking])
-        
-        print(f"DEBUG: Total retiradas = {total_retiradas}, Total quantidade = {total_quantidade}")
-        
-        # Formatar resultado
-        resultado = {
-            'ranking': [
-                {
-                    'funcionario': r.solicitante_nome,
-                    'total_retiradas': int(r.total_retiradas) if r.total_retiradas else 0,
-                    'total_quantidade': int(r.total_quantidade) if r.total_quantidade else 0
-                }
-                for r in ranking
-            ],
-            'total_retiradas': int(total_retiradas) if total_retiradas else 0,
-            'total_quantidade': int(total_quantidade) if total_quantidade else 0
-        }
-        
-        return jsonify(resultado)
-        
-    except Exception as e:
-        import traceback
-        print(f"Erro no ranking de funcionários: {str(e)}")
-        print(traceback.format_exc())
-        return jsonify({
-            'ranking': [],
-            'total_retiradas': 0,
-            'total_quantidade': 0,
             'error': str(e)
         }), 500
 
