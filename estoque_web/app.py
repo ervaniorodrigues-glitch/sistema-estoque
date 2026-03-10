@@ -232,6 +232,47 @@ class Emprestimo(db.Model):
 
 # ==================== ROTAS ====================
 
+@app.route('/init-database-render')
+def init_database_render():
+    """Rota especial para inicializar banco de dados no Render"""
+    try:
+        # Criar todas as tabelas
+        db.create_all()
+        
+        # Verificar se usuário master já existe
+        master = Usuario.query.filter_by(usuario='master').first()
+        
+        if not master:
+            # Criar usuário master
+            master = Usuario(
+                nome='Administrador Master',
+                usuario='master',
+                senha=generate_password_hash('@Senha01'),
+                admin=True,
+                tipo='admin',
+                ativo=True
+            )
+            db.session.add(master)
+            db.session.commit()
+            return jsonify({
+                'success': True,
+                'message': 'Banco inicializado! Usuário master criado.',
+                'usuario': 'master',
+                'senha': '@Senha01'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'message': 'Banco já está inicializado!',
+                'usuario': 'master',
+                'senha': '@Senha01'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao inicializar banco: {str(e)}'
+        }), 500
+
 @app.route('/')
 def index():
     if 'usuario_id' not in session:
